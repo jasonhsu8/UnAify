@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "UnAIfy",
+  "version": "0.1.0",
+  "description": "Prototype popup UI for UnAIfy - choose which anti-AI filters you want!",
+  "permissions": ["storage"],
+  "action":{
+    "default_popup": "popup.html",
+    "default_title": "UnAIfy"
+  },
+  "content_scripts":[
+    {
+      "matches": ["https://www.google.*/*", "https://google.*/@"],
+      "js": ["content-google.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*/*", "https://*/*"],
+      "exclude_matches": ["https://www.google.*/*", "https://google.*/@"],
+      "js": ["content-generator.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
