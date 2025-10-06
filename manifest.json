@@ -10,13 +10,19 @@
   },
   "content_scripts":[
     {
-      "matches": ["https://www.google.*/*", "https://google.*/@"],
+      "matches": [
+        "https://www.google.com/*",
+        "https://www.google.co.uk/*"
+        ],
       "js": ["content-google.js"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://*/*", "https://*/*"],
-      "exclude_matches": ["https://www.google.*/*", "https://google.*/@"],
+      "exclude_matches": [
+        "https://www.google.com/*",
+        "https://www.google.co.uk/*"
+        ],
       "js": ["content-generic.js"],
       "run_at": "document_idle"
     }

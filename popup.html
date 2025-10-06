@@ -6,22 +6,23 @@
     <title>UnAIfy</title>
     <style>
         :root {--bg:#0f172a; --card:#111827; --fg:#e527eb; --muted:#9ca3af; --accent:#60a5fa;}
+        html, body {min-width: 420px;}
         body {margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, -apple-system, Sergoe UI, Roberto, Helvetica, Arial, sans-serif;}
-        .warp {width: 320px; padding: 16px;}
-        .header{display: flex; gap: 12px; align-items: center;}
-        .logo{width: 44px; height: 44px; border-radius: 12px; background: #1f2937; display: flex; align-items: center; justify-content: center;}
-        .logo img{width: 29px; height: 28px; display: block;}
+        .warp {width: 420; padding: 20px 24px;}
+        .header{display: flex; gap: 16px; align-items: center; margin-bottom: 12px;}
+        .logo{width: 48px; height: 48px; border-radius: 12px; background: #1f2937; display: flex; align-items: center; justify-content: center;}
+        .logo img{width: 34px; height: 34px; display: block;}
         h1{font-size: 18px; margin: 0 0 4px;}
         .subtitle{color:var(--muted); margin: 0 0 12px;}
-        .card{background:var(--card); border: 1px solid #1f2937; border-radius: 14px; padding: 12px;}
-        .explain{color: var(--muted); margin: 8px 0 12px;}
-        .toggle{display: flex; align-items: center; justify-content: space-between; gap:2px; padding: 8px 10px; border-radius: 10px;}
+        .card{background:var(--card); border: 1px solid #1f2937; border-radius: 16px; padding: 16px;}
+        .explain{color: var(--muted); margin: 6px 0 12px;}
+        .toggle{display: flex; align-items: center; justify-content: space-between; gap:18px; padding: 12px; border-radius: 12px;}
         .toggle:hover{background: #0b1220;}
-        .toggle label{display: flex; flex-direction: column; gap: 2px; cursor: pointer;}
+        .toggle label{display: flex; flex-direction: column; gap: 4px; cursor: pointer;}
         .title{font-weight: 600;}
         .desc{color:var(--muted); font-size: 12px;}
-        .footer{margin-top: 12px; display: flex; gap: 9px; align-items: center; justify-content: space-between;}
-        .btn{border: 1px solid #334155; background: #0b1220; color: var(--fg); padding: 8px 10px; border-radius: 10px; cursor: pointer;}
+        .footer{margin-top: 12px; display: flex; gap: 10px; align-items: center; justify-content: space-between;}
+        .btn{border: 1px solid #334155; background: #0b1220; color: var(--fg); padding: 10px 12px; border-radius: 10px; cursor: pointer;}
         .btn:active{transform: translateY(1px);}
         .status{color: var(--muted); font-size: 12px;}
         .link{color: var(--accent); text-decoration: none;}
