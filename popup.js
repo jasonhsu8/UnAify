@@ -41,7 +41,7 @@ const DEFAULT_CUTOFF_YEAR = 2022;
 
 // DOM
 const $ = (sel) => document.querySelector(sel);
-const featuresE1 = $("#features");
+const featuresEl = $("#features");
 const statusE1 = $("#status");
 const resetBtn = $("#reset");
 
@@ -81,7 +81,7 @@ async function saveToggle(cutoffyear) {
   await chrome.storage.sunc.set({unAIfyCutOffYear: cutoffyear});
 }
 
-// === Domain utils ===
+// Domain utils
 function normalizeDomain(input) {
   if (!input) return null;
   let s = input.trim().toLowerCase();
@@ -106,7 +106,7 @@ function listToTextarea(list) {
   return (list || []).join("\n");
 }
 
-// === Render ===
+// Render
 function render({ toggles, blacklist, cutoffYear }) {
   featuresEl.innerHTML = "";
 
@@ -143,7 +143,7 @@ function render({ toggles, blacklist, cutoffYear }) {
     row.appendChild(input);
     featuresEl.appendChild(row);
 
-    // --- Editor: Blacklist ---
+    // Editor: Blacklist
     if (f.key === "filter_ai_domains") {
       const editorWrap = document.createElement("div");
       editorWrap.style.margin = "6px 0 4px";
@@ -210,7 +210,7 @@ function render({ toggles, blacklist, cutoffYear }) {
       });
     }
 
-    // --- Editor: Cutoff Year ---
+    // Editor: Cutoff Year
     if (f.key === "warn_post_year") {
       const editorWrap = document.createElement("div");
       editorWrap.style.margin = "6px 0 4px";
@@ -277,7 +277,7 @@ function render({ toggles, blacklist, cutoffYear }) {
   });
 }
 
-// === Init ===
+// Init
 async function init() {
   const state = await loadSettings();
   render(state);
