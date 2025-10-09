@@ -7,7 +7,7 @@
     blacklist: []
   };
 
-  // ---- Promisified storage helpers (MV3-safe) ----
+  // Promisified storage helpers (MV3-safe)
   const storage = {
     get(keys) {
       return new Promise((resolve) => chrome.storage.sync.get(keys, resolve));
