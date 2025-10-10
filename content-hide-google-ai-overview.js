@@ -44,7 +44,7 @@
     return LABELS.some((lbl) => L.includes(lbl));
   }
 
-  function isAICandiateEl(el) {
+  function isAICandidateEl(el) {
     if(!el) return false ;
     if (isAIText(el.textContent)) return true;
     const aria = el.getAttribute?.("aria-label");
@@ -54,21 +54,21 @@
 
   function nearestModule(el) {
     if(!el) return null;
-    const mod = el.closest(CONTAINER_SELECTOR);
-    if(!mod) return null;
+    const moduleE1 = el.closest(CONTAINER_SELECTOR);
+    if(!moduleE1) return null;
 
     // Hard guard - never hide these large wrappers
-    const tag = mod.tagName?.toLowerCase?.() || "";
+    const tag = moduleE1.tagName?.toLowerCase?.() || "";
     if (
-      mod === document.body ||
-      mod === document.documentElement ||
-      mod.id === "search" ||
-      mod.id === "rcnt" ||
+      moduleE1 === document.body ||
+      moduleE1 === document.documentElement ||
+      moduleE1.id === "search" ||
+      moduleE1.id === "rcnt" ||
       tag === "main"
     ) {
       return null;
     }
-    return mod;
+    return moduleE1;
   }
 
   function hideEl(el) {
@@ -92,18 +92,18 @@
     // Headings / labelled nodes near the top
     const nodes = scope.querySelectorAll('h1, h2, h3, [role="heading"], [aria-label], div, span');
     for (const el of nodes) {
-      if (!isAICandiateEl(el)) continue;
-      const mod = nearestModule(el);
-      if (mod) return mod;
+      if (!isAICandidateEl(el)) continue;
+      const moduleE1 = nearestModule(el);
+      if (moduleE1) return moduleE1;
     }
 
-    // Links that metnion "AI Overview" text
+    // Links that mention "AI Overview" text
     const links = scope.querySelectorAll("a[href]");
     for (const a of links) {
       const t = a.textContent || "";
       if (isAIText(t) || /ai[- ]overviews?/i.test(t)) {
-        const mod = nearestModule(a);
-        if (mod) return mod;
+        const moduleE1 = nearestModule(a);
+        if (moduleE1) return moduleE1;
       }
     }
     
@@ -112,8 +112,8 @@
     for (const el of guessy) {
       const rect = el.getBoundingClientRect?.();
       if(rect && rect.top < 900) {
-        const mod = nearestModule(el);
-        if (mod) return mod;
+        const moduleE1 = nearestModule(el);
+        if (moduleE1) return moduleE1;
       }
     }
 
@@ -123,9 +123,9 @@
   // TO DELETE?
   function hideOnce() {
     if(!enabled) return false;
-    const mod = findAIOverviewContainer(document);
-    if(!mod) return false;
-    hideEl(mod);
+    const moduleE1 = findAIOverviewContainer(document);
+    if(!moduleE1) return false;
+    hideEl(moduleE1);
     return true;
   }
 
