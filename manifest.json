@@ -19,14 +19,14 @@
         "https://*/*",
         "https://*/*"
         ],
-      "include_globs": ["*:/www.google.*/search*"],
-      "js": ["content-google.js", "content-hide-google-ai-overview.js"],
+      "include_globs": ["*://www.google.*/search*"],
+      "js": ["content-blacklist.js", "content-hide-google-ai-overview.js"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://*/*", "https://*/*"],
       "exclude_globs": [
-        "*:/www.google.*/search*"
+        "*://www.google.*/search*"
         ],
       "js": ["content-warning.js"],
       "run_at": "document_idle"
