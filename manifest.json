@@ -22,7 +22,8 @@
     "https://www.google.co.uk/*"
   ],
   "background": {
-    "service_worker": "background-hide-google-ai-overview-task.js"
+    "service_worker": "background-hide-google-ai-overview-task.js",
+    "type": "module"
   },
   "content_scripts":[
     {

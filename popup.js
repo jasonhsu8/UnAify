@@ -314,9 +314,9 @@ function render({ toggles, blacklist, cutoffYear }) {
 
 // Init
 async function init() {
-  featuresEl = $("#features");
-  statusEl = $("#status");
-  resetBtn = $("#reset")
+  featuresEl = document.getElementById("features");
+  statusEl = document.getElementById("status");
+  resetBtn = document.getElementById("reset")
 
   if(!featuresEl || !statusEl || !resetBtn) {
     console.error("[UnAIfy] Missing DOM nodes (#features, #status, #reset");

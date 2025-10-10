@@ -94,7 +94,7 @@
         <div style="display:flex; gap:10px; align-items:flex-start;">
           <div style="width:8px; height:8px; margin-top:6px; border-radius:50%; background:#f59e0b;"></div>
           <div style="flex:1;">
-            <div style="font-weight:600; margin-bottom:2px;">UnAIfy — Heads up</div>
+            <div style="font-weight:600; margin-bottom:2px;">UnAIfy - Heads up</div>
             <div>
               This page appears to be created or updated <strong>after ${year}</strong>${
       foundDate ? ` (detected: ${foundDate.toISOString().slice(0, 10)})` : ""

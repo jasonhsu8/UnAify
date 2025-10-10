@@ -59,7 +59,7 @@ try {
 });
 
 // If user flips the toggle while on Google, remove injected CSS
-chrome.storage.onChanged.addListner(async (changes, area) => {
+chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== "sybc" || !changes.unAIfySettings) return;
   const newVal = changes.unAIfySettings.newValue || {};
   const hide = !!newVal.hide_sge;
