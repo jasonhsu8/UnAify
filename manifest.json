@@ -3,18 +3,26 @@
   "name": "UnAIfy",
   "version": "0.1.0",
   "description": "Prototype popup UI for UnAIfy - choose which anti-AI filters you want!",
-  "permissions": ["storage"],
+  "action":{
+    "default_popup": "popup.html",
+    "default_title": "UnAIfy"
+  },
   "icons": {
     "16": "icons/strikeAI16.png",
     "48": "icons/strikeAI48.png",
     "128": "icons/strikeAI128.png"
   },
-  "action":{
-    "default_popup": "popup.html",
-    "default_title": "UnAIfy"
-  },
-  "js_background": {
-    "service_background_worker": "background-hide-google-ai-overview-task.js"
+  "permissions": [
+    "storage",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://www.google.com/",
+    "https://www.google.co.uk"
+  ],
+  "background": {
+    "service_worker": "background-hide-google-ai-overview-task.js"
   },
   "content_scripts":[
     {
@@ -31,11 +39,14 @@
         "https://www.google.com/*",
         "https://www.google.co.uk/*"
         ],
-      "js": ["content-generic.js"],
+      "js": ["content-warning.js"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["*://*.google.com/search*"],
+      "matches": [
+      "*https://www.google.com/search*",
+      "https://www.google.co.uk/search*"
+      ],
       "js": ["content-hide-google-ai-overview.js"]
     }
   ]

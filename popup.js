@@ -29,12 +29,12 @@ const FEATURES =[
 
 // Defaults
 const DEFAULT_BLACKLIST = [
-  "https://www.perplexity.ai/",
-  "https://deepai.org/",
-  "https://gemini.google.com/app",
-  "https://openai.com/",
-  "https://www.aixploria.com/en/free-ai/",
-  "https://scite.ai/"
+  "perplexity.ai",
+  "deepai.org",
+  "gemini.google.com",
+  "openai.com",
+  "aixploria.com",
+  "scite.ai"
 ]
 
 const DEFAULT_CUTOFF_YEAR = 2022;
@@ -42,13 +42,13 @@ const DEFAULT_CUTOFF_YEAR = 2022;
 // DOM
 const $ = (sel) => document.querySelector(sel);
 const featuresEl = $("#features");
-const statusE1 = $("#status");
+const statusEl = $("#status");
 const resetBtn = $("#reset");
 
 // Status helper
 function setStatus(text, timeout = 1200) {
-  statusE1.textContent = text;
-  if (timeout) setTimeout(() => (statusE1.textContent = "Saved"), timeout);
+  statusEl.textContent = text;
+  if (timeout) setTimeout(() => (statusEl.textContent = "Saved"), timeout);
 }
 
 // Storage helpers
@@ -71,15 +71,25 @@ async function loadSettings() {
   };
 }
 
-async function saveToggle(toggles) {
+async function saveToggles(toggles) {
   await chrome.storage.sunc.set({unAIfySettings: toggles});
 }
-async function saveToggle(blacklist) {
+async function saveBlacklist(blacklist) {
   await chrome.storage.sunc.set({unAIfyBlacklist: blacklist});
 }
-async function saveToggle(cutoffyear) {
+async function saveCutOffYear(cutoffyear) {
   await chrome.storage.sunc.set({unAIfyCutOffYear: cutoffyear});
 }
+/*
+async function loadSettings() {
+  const {unAIfySettings} = await chrome.storage.sync.get("unAIfySettings");
+  const defaults = Object.fromEntries(FEATURES.map(f => [f.key, true]));
+  return { ...(defaults), ...(unAIfySettings || {})};
+}
+async function saveSettings(obj) {
+  await chrome.storage.sync.set({unAIfySettings: obj});
+}
+*/
 
 // Domain utils
 function normalizeDomain(input) {
@@ -251,19 +261,19 @@ function render({ toggles, blacklist, cutoffYear }) {
 
       const cutoffDisplay = () => info.querySelector("#cutoff-display");
       const cutoffInput = () => panel.querySelector("#cutoff-input");
-      const saveBtn = () => panel.querySelector("#save-cutoff");
-      const cancelBtn = () => panel.querySelector("#cancel-cutoff");
+      const saveBtn2 = () => panel.querySelector("#save-cutoff");
+      const cancelBtn2 = () => panel.querySelector("#cancel-cutoff");
 
       editBtn.addEventListener("click", () => {
         const showing = panel.style.display !== "none";
         panel.style.display = showing ? "none" : "block";
       });
 
-      cancelBtn().addEventListener("click", () => {
+      cancelBtn2().addEventListener("click", () => {
         panel.style.display = "none";
       });
 
-      saveBtn().addEventListener("click", async () => {
+      saveBtn2().addEventListener("click", async () => {
         let val = parseInt(cutoffInput().value, 10);
         if (!Number.isFinite(val)) val = DEFAULT_CUTOFF_YEAR;
         val = Math.min(2100, Math.max(1990, val));
@@ -287,7 +297,7 @@ async function init() {
     await Promise.all([
       saveToggles(defaultToggles),
       saveBlacklist(DEFAULT_BLACKLIST),
-      saveCutoffYear(DEFAULT_CUTOFF_YEAR)
+      saveCutOffYear(DEFAULT_CUTOFF_YEAR)
     ]);
     render({
       toggles: defaultToggles,
@@ -300,5 +310,11 @@ async function init() {
   setStatus("Ready", 800);
 }
 
-init();
+//ensure popup.js runs after DOM
+// if popup loads it with 'defer', this is also safe
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init, {once: true});
+} else {
+  init();
+}
 

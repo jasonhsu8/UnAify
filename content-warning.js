@@ -1,4 +1,4 @@
-// content-generic.js — UnAIfy: warn on post-year pages
+// content-warning.js — UnAIfy: warn on post-year pages
 
 (() => {
   const LOG_PREFIX = "[UnAIfy]";
