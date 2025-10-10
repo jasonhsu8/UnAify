@@ -14,7 +14,7 @@
     "generative ai is experimental",
     "learn more about ai overviews",
     "learn about ai overviews",
-    "ai pvervoews are experimental"
+    "ai previews are experimental"
   ];
 
   const CONTAINER_SELECTOR = [
@@ -23,7 +23,7 @@
     ".Ww4FFb",
     "[data-hveid]",
     "[data-sokoban-container]",
-    ".g, #search"
+    ".g"
   ].join(", ")
 
   const storage = {
@@ -56,46 +56,20 @@
     if(!el) return null;
     const mod = el.closest(CONTAINER_SELECTOR);
     if(!mod) return null;
-  }
 
-  // Hard guard - never hide these large wrappers
-  if (
-    mod === document.body ||
-    mod === document.documentElement ||
-    mod.id === "search" ||
-    mod.id === "pcnt" ||
-    mod.tagName.toLowerCase() === "main"
-  ) {
-    return null;
-  }
-  return mod;
-
-/*
-  function isAIHeadingText(t) {
-    if (!t) return false;
-    const L = lc(t);
-    return LABELS.some((lbl) => L.includes(lbl));
-  }
-
-  function isAIHeadingEl(el) {
-    // headings or lavelled blocks
-    if (!el) return false;
-    if (isAIHeadingText(el.textContent)) return true;
-
-    const aria = el.getAttribute?.("aria-label");
-    if (isAIHeadingText(aria)) return true;
-
-    return false;
-  }
-
-  function nearestSerpContainer(el) {
-    let n = el;
-    while (n && n != document.body) {
-      if (n.matches?.(".MjjYud, .xpd, .Ww4FFb, [data-hveid], [data-sokoban-container], .g, #search")) return n;
-      n = n.parentElement;
+    // Hard guard - never hide these large wrappers
+    const tag = mod.tagName?.toLowerCase?.() || "";
+    if (
+      mod === document.body ||
+      mod === document.documentElement ||
+      mod.id === "search" ||
+      mod.id === "rcnt" ||
+      tag === "main"
+    ) {
+      return null;
     }
+    return mod;
   }
-  */
 
   function hideEl(el) {
     if (!el || el.hasAttribute(MARK)) return;
@@ -124,7 +98,7 @@
     }
 
     // Links that metnion "AI Overview" text
-    const links = scope.querySelectorAll("#a[href]");
+    const links = scope.querySelectorAll("a[href]");
     for (const a of links) {
       const t = a.textContent || "";
       if (isAIText(t) || /ai[- ]overviews?/i.test(t)) {
@@ -215,7 +189,7 @@
     startUrlWatcher();
     apply();
     //Extra pass after load for late hydration content
-    setTimeout(() => enabled && findAndHideOnce(), 800);
+    setTimeout(() => enabled && hideOnce(), 800);
     // console.info(LOG, "ready, enabled:", enabled);
   })();
 })();
