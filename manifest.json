@@ -18,8 +18,8 @@
     "tabs"
   ],
   "host_permissions": [
-    "https://www.google.com/",
-    "https://www.google.co.uk"
+    "https://www.google.com/*",
+    "https://www.google.co.uk/*"
   ],
   "background": {
     "service_worker": "background-hide-google-ai-overview-task.js"
@@ -27,24 +27,24 @@
   "content_scripts":[
     {
       "matches": [
-        "https://www.google.com/*",
-        "https://www.google.co.uk/*"
+        "https://*/*",
+        "https://*/*"
         ],
+      "include_globs": ["*:/www.google.*/search*"],
       "js": ["content-google.js"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://*/*", "https://*/*"],
-      "exclude_matches": [
-        "https://www.google.com/*",
-        "https://www.google.co.uk/*"
+      "exclude_globs": [
+        "*:/www.google.*/search*"
         ],
       "js": ["content-warning.js"],
       "run_at": "document_idle"
     },
     {
       "matches": [
-      "*https://www.google.com/search*",
+      "https://www.google.com/search*",
       "https://www.google.co.uk/search*"
       ],
       "js": ["content-hide-google-ai-overview.js"]
