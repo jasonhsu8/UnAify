@@ -12,19 +12,7 @@
     "48": "icons/strikeAI48.png",
     "128": "icons/strikeAI128.png"
   },
-  "permissions": [
-    "storage",
-    "scripting",
-    "tabs"
-  ],
-  "host_permissions": [
-    "https://www.google.com/*",
-    "https://www.google.co.uk/*"
-  ],
-  "background": {
-    "service_worker": "background-hide-google-ai-overview-task.js",
-    "type": "module"
-  },
+  "permissions": ["storage"],
   "content_scripts":[
     {
       "matches": [
@@ -32,7 +20,7 @@
         "https://*/*"
         ],
       "include_globs": ["*:/www.google.*/search*"],
-      "js": ["content-google.js"],
+      "js": ["content-google.js", "content-hide-google-ai-overview.js"],
       "run_at": "document_idle"
     },
     {
@@ -42,13 +30,6 @@
         ],
       "js": ["content-warning.js"],
       "run_at": "document_idle"
-    },
-    {
-      "matches": [
-      "https://www.google.com/search*",
-      "https://www.google.co.uk/search*"
-      ],
-      "js": ["content-hide-google-ai-overview.js"]
     }
   ]
 }
