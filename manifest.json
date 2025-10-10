@@ -3,40 +3,33 @@
   "name": "UnAIfy",
   "version": "0.1.0",
   "description": "Prototype popup UI for UnAIfy - choose which anti-AI filters you want!",
-  "permissions": ["storage"],
+  "action":{
+    "default_popup": "popup.html",
+    "default_title": "UnAIfy"
+  },
   "icons": {
     "16": "icons/strikeAI16.png",
     "48": "icons/strikeAI48.png",
     "128": "icons/strikeAI128.png"
   },
-  "action":{
-    "default_popup": "popup.html",
-    "default_title": "UnAIfy"
-  },
-  "js_background": {
-    "service_background_worker": "background-hide-google-ai-overview-task.js"
-  },
+  "permissions": ["storage"],
   "content_scripts":[
     {
       "matches": [
-        "https://www.google.com/*",
-        "https://www.google.co.uk/*"
+        "https://*/*",
+        "https://*/*"
         ],
-      "js": ["content-google.js"],
+      "include_globs": ["*:/www.google.*/search*"],
+      "js": ["content-google.js", "content-hide-google-ai-overview.js"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://*/*", "https://*/*"],
-      "exclude_matches": [
-        "https://www.google.com/*",
-        "https://www.google.co.uk/*"
+      "exclude_globs": [
+        "*:/www.google.*/search*"
         ],
-      "js": ["content-generic.js"],
+      "js": ["content-warning.js"],
       "run_at": "document_idle"
-    },
-    {
-      "matches": ["*://*.google.com/search*"],
-      "js": ["content-hide-google-ai-overview.js"]
     }
   ]
 }
