@@ -4,7 +4,7 @@
   const LOG_PREFIX = "[UnAIfy]";
   const settings = {
     toggles: { warn_post_year: true }, // default on
-    cutoffYear: 2022
+    cutoffyear: 2022
   };
 
   // ---- Promisified storage helpers (MV3-safe) ----
@@ -125,8 +125,8 @@
     if (!d) return; // no reliable signal
 
     const pageYear = d.getUTCFullYear();
-    if (pageYear > settings.cutoffYear) {
-      injectBanner(settings.cutoffYear, d);
+    if (pageYear > settings.cutoffyear) {
+      injectBanner(settings.cutoffyear, d);
     }
   }
 
@@ -142,10 +142,10 @@
       // Re-evaluate if toggles flipped
       maybeWarn();
     }
-    if (changes.unAIfyCutoffYear) {
-      const v = changes.unAIfyCutoffYear.newValue;
+    if (changes.unAIfyCutOffYear) {
+      const v = changes.unAIfyCutOffYear.newValue;
       if (Number.isInteger(v)) {
-        settings.cutoffYear = v;
+        settings.cutoffyear = v;
         // Re-evaluate with new cutoff
         const banner = document.getElementById("unAIfy-postyear-banner");
         if (banner) banner.remove();
@@ -158,11 +158,11 @@
   async function init() {
     const {
       unAIfySettings = { warn_post_year: true },
-      unAIfyCutoffYear = 2022
-    } = await storage.get(["unAIfySettings", "unAIfyCutoffYear"]);
+      unAIfyCutOffYear = 2022
+    } = await storage.get(["unAIfySettings", "unAIfyCutOffYear"]);
 
     settings.toggles = { ...settings.toggles, ...(unAIfySettings || {}) };
-    settings.cutoffYear = Number.isInteger(unAIfyCutoffYear) ? unAIfyCutoffYear : 2022;
+    settings.cutoffyear = Number.isInteger(unAIfyCutOffYear) ? unAIfyCutOffYear : 2022;
 
     // Run once on load; some sites hydrate late, so also retry quickly
     maybeWarn();
