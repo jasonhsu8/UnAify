@@ -8,9 +8,9 @@
     "default_title": "UnAIfy"
   },
   "icons": {
-    "16": "icons/strikeAI16.png",
-    "48": "icons/strikeAI48.png",
-    "128": "icons/strikeAI128.png"
+    "16": "icons/UnAIfy16.png",
+    "48": "icons/UnAIfy48.png",
+    "128": "icons/UnAIfy128.png"
   },
   "permissions": ["storage"],
   "content_scripts":[
