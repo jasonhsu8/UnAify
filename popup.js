@@ -80,7 +80,7 @@ async function syncGoogleSGE(toggles) {
   const on = !!toggles.disable_sge;
   if (!chrome.declarativeNetRequest?.updateEnabledRulesets) return; // Chrome only guard
   if (on) {
-    await chrome.declarativeNetRequest.updateEnabledRulesets({ enabledRulesetIds: ["google-ai-overview-off-redirect"] });
+    await chrome.declarativeNetRequest.updateEnabledRulesets({ enableRulesetIds: ["google-ai-overview-off-redirect"] });
   } else {
     await chrome.declarativeNetRequest.updateEnabledRulesets({ disableRulesetIds: ["google-ai-overview-off-redirect"] });
   }

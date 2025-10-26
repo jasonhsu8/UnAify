@@ -1,22 +1,44 @@
 [
     {
-        "id": 14001,
-        "priority": 1,
-        "action": {
-            "type": "redirect",
-            "redirect": {
-                "transform": {
-                    "queryTransform": {
-                        "addOrReplaceParams": [
-                            {"key": "udm", "value": "14"}
-                        ]
-                    }
+      "id": 1,
+      "priority": 1,
+      "action": {
+        "type": "redirect",
+        "redirect": {
+            "transform": {
+                "queryTransform": {
+                    "addOrReplaceParams": [
+                      { "key": "udm", "value": "14" }
+                    ]
                 }
             }
-        },
-        "condition": {
-            "resourceType": ["main_frame"],
-            "regexFilter": "^https?://(www|m)\\.google\\.[^/]+/search(\\?|$)"
         }
+      },
+      "condition": {
+        "urlFilter": "||www.google.*/search*",
+        "resourceTypes": ["main_frame"]
+      }
+    },
+    {
+      "id": 2,
+      "priority": 2,
+      "action": {
+        "type": "allow"
+      },
+      "condition": {
+        "urlFilter": "||www.google.*/search*tbm=nws*",
+        "resourceTypes": ["main_frame"]
+      }
+    },
+    {
+      "id": 3,
+      "priority": 3,
+      "action": {
+        "type": "allow"
+      },
+      "condition": {
+        "urlFilter": "||www.google.*/search*udm=*",
+        "resourceTypes": ["main_frame"]
+      }
     }
 ]
