@@ -1,20 +1,21 @@
 // Features - These will be connected to content scirpts later
 const FEATURES =[
   {
-    key: "hide_sge",
-    title: "Hide Google AI Overview",
-    desc: "Removes Google's AI generated 'Overview' search result box"
+    key: "disable_sge",
+    title: "Disable Google AI Overview",
+    desc: "Disables Google's AI generated 'Overview' search result box"
   },
   {
     key: "filter_ai_domains",
-    title: "Filter AI-heavy domains",
+    title: "WIP: Filter AI-heavy domains",
     desc: "Hide results from blacklisted sites (Editable list)"
   },
   {
     key: "warn_post_year",
-    title: "Warning on post-2022 pages",
+    title: "WIP: Warning on post-2022 pages",
     desc: "Shows a warning if a page is created/updated after 2022"
   },
+  /*
   // TO DO?
   {
     key: "hide_ai_sections",
@@ -26,7 +27,9 @@ const FEATURES =[
     title: "Highlights likely AI-generated images",
     desc: "Visually highlights and marks images that may be AI generated"
   }
+  */
 ];
+
 
 // Defaults
 const DEFAULT_BLACKLIST = [
@@ -73,46 +76,17 @@ const saveToggles = (toggles) => chrome.storage.sync.set({unAIfySettings: toggle
 const saveBlacklist = (blacklist) => chrome.storage.sync.set({unAIfyBlacklist: blacklist});
 const saveCutOffYear = (cutoffyear) => chrome.storage.sync.set({unAIfyCutOffYear: cutoffyear});
 
-/*
-async function loadSettings() {
-  const [
-    {unAIfySettings},
-    {unAIfyBlacklist},
-    {unAIfyCutOffYear}
-  ] = await Promise.all([
-    chrome.storage.sync.get("unAIfySettings"),
-    chrome.storage.sync.get("unAIfyBlacklist"),
-    chrome.storage.sync.get("unAIfyCutOffYear")
-  ]);
-
-  const defaultToggles = Object.fromEntries(FEATURES.map(f => [f.key, true]));
-  return{
-    toggles: { ...defaultToggles, ...(unAIfySettings || {})},
-    blacklist: Array.isArray(unAIfyBlacklist) ? unAIfyBlacklist: DEFAULT_BLACKLIST,
-    cutoffyear: Number.isInteger(unAIfyCutOffYear) ? unAIfyCutOffYear: DEFAULT_CUTOFF_YEAR,
-  };
+async function syncGoogleSGE(toggles) {
+  const on = !!toggles.disable_sge;
+  if (!chrome.declarativeNetRequest?.updateEnabledRulesets) return; // Chrome only guard
+  if (on) {
+    await chrome.declarativeNetRequest.updateEnabledRulesets({ enabledRulesetIds: ["google-ai-overview-off-redirect"] });
+  } else {
+    await chrome.declarativeNetRequest.updateEnabledRulesets({ disableRulesetIds: ["google-ai-overview-off-redirect"] });
+  }
 }
 
-async function saveToggles(toggles) {
-  await chrome.storage.sunc.set({unAIfySettings: toggles});
-}
-async function saveBlacklist(blacklist) {
-  await chrome.storage.sunc.set({unAIfyBlacklist: blacklist});
-}
-async function saveCutOffYear(cutoffyear) {
-  await chrome.storage.sunc.set({unAIfyCutOffYear: cutoffyear});
-}
-*/
-/*
-async function loadSettings() {
-  const {unAIfySettings} = await chrome.storage.sync.get("unAIfySettings");
-  const defaults = Object.fromEntries(FEATURES.map(f => [f.key, true]));
-  return { ...(defaults), ...(unAIfySettings || {})};
-}
-async function saveSettings(obj) {
-  await chrome.storage.sync.set({unAIfySettings: obj});
-}
-*/
+
 
 // Domain utils
 function normalizeDomain(input) {
@@ -173,6 +147,9 @@ function render({ toggles, blacklist, cutoffyear }) {
       await saveToggles(newToggles);
       toggles[f.key] = input.checked;
       setStatus("Saved");
+      if (f.key === "disable_sge") {
+        await syncGoogleSGE(newToggles);
+      }
     });
 
     row.appendChild(label);
@@ -324,6 +301,7 @@ async function init() {
   }
 
   const state = await loadSettings();
+  await syncGoogleSGE(state.toggles);
   render(state);
 
   resetBtn.addEventListener("click", async () => {
@@ -333,6 +311,7 @@ async function init() {
       saveBlacklist(DEFAULT_BLACKLIST),
       saveCutOffYear(DEFAULT_CUTOFF_YEAR)
     ]);
+    await syncGoogleSGE(defaultToggles);
     render({
       toggles: defaultToggles,
       blacklist: [...DEFAULT_BLACKLIST],
@@ -351,4 +330,3 @@ if (document.readyState === "loading") {
 } else {
   init();
 }
-

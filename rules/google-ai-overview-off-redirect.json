@@ -1,0 +1,22 @@
+[
+    {
+        "id": 14001,
+        "priority": 1,
+        "action": {
+            "type": "redirect",
+            "redirect": {
+                "transform": {
+                    "queryTransform": {
+                        "addOrReplaceParams": [
+                            {"key": "udm", "value": "14"}
+                        ]
+                    }
+                }
+            }
+        },
+        "condition": {
+            "resourceType": ["main_frame"],
+            "regexFilter": "^https?://(www|m)\\.google\\.[^/]+/search(\\?|$)"
+        }
+    }
+]

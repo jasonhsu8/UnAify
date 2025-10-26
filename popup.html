@@ -11,14 +11,14 @@
         --radius:14px;}
         *{box-sizing: border-box;}
         html, body {min-width: 420px;}
-        body {margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, -apple-system, Sergoe UI, Roberto, Helvetica, Arial, sans-serif;}
-        .warp {width: 420; padding: 20px 24px;}
+        body {margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, -apple-system, "Sergoe UI", Roberto, Helvetica, Arial, sans-serif;}
+        .wrap {width: 420; padding: 8px 8px; margin: 0 auto;}
         .header{display: flex; gap: 16px; align-items: center; margin-bottom: 12px;}
         .logo{width: 48px; height: 48px; border-radius: 12px; background: #279c81; display: flex; align-items: center; justify-content: center;}
         .logo img{width: 34px; height: 34px; display: block;}
         h1{font-size: 18px; margin: 0 0 4px;}
         .subtitle{color:var(--muted); margin: 0 0 12px;}
-        .card{background:var(--card); border: 1px solid #334155; border-radius: 16px; padding: 16px;}
+        .card{background:var(--card); border: 1px solid #334155; border-radius: 16px; padding: 16px; margin: 0px, 2px;}
         .explain{color: var(--muted); margin: 6px 0 12px;}
         .toggle{display: flex; align-items: center; justify-content: space-between; gap:18px; padding: 12px; border-radius: 12px;}
         .toggle:hover{background: #334155;}
@@ -46,7 +46,7 @@
         </div>
         <div class="card">
             <p class="explain">
-                Choose which filters you want to enable.
+                <b>Choose which filters you want to enable!</b>
             </p>
             <div id="features"></div>
             <div class="footer">
@@ -54,7 +54,7 @@
                 <span id="status" class="status">Ready</span>
             </div>
         </div>
-        <a class="link" href="http://developer.chrome.com/docs/extensions/mv3" target="_blank" rel="noreferrer noopener">Chrome MV3 docs</a>
+        <a class="link" href="http://developer.chrome.com/docs/extensions/mv3" target="_blank" rel="noreferrer noopener">Chrome MV3 documentation</a>
     </div>
     <script src="popup.js" defer></script>
 </body>
