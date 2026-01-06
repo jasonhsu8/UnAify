@@ -1,55 +1,36 @@
-// content-blacklist.js — UnAIfy: filter blacklisted domains on Google SERPs
+// content-blacklist.js — UnAIfy: hide GitHub-blocklisted domains on Google SERPs (MV3)
 (() => {
   "use strict";
 
   const LOG_PREFIX = "[UnAIfy]";
-  const REMOTE_BLACKLIST_URL = "PUT_YOUR_RAW_GITHUB_URL_HERE"; // e.g. https://raw.githubusercontent.com/user/repo/main/blacklist.txt
 
-  // If user hasn't opened popup yet, storage may be empty -> fallback list keeps feature working.
-  const DEFAULT_FALLBACK_BLACKLIST = [
-    "perplexity.ai",
-    "deepai.org",
-    "gemini.google.com",
-    "openai.com",
-    "aixploria.com",
-    "scite.ai"
-  ];
+  // Storage keys
+  const SYNC_KEYS = { settings: "unAIfySettings" };
+  const LOCAL_KEYS = { githubList: "unAIfyGithubBlacklist" };
 
-  // Cache remote list so you don't fetch it on every Google search page load
-  const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-  const STORAGE_KEYS = {
-    settings: "unAIfySettings",
-    localList: "unAIfyBlacklist",
-    remoteCache: "unAIfyRemoteBlacklistCache",
-    remoteFetchedAt: "unAIfyRemoteBlacklistFetchedAt"
-  };
+  // Toggle keys (MUST match popup.js FEATURES keys)
+  const TOGGLE_FILTER = "filter_ai_domains";
+  const TOGGLE_GITHUB = "use_uBlockOrigin_blacklist";
 
   const state = {
-    enabled: true,             // filter_ai_domains toggle
-    blacklist: [],             // merged final list
+    enabled: true,
+    useGithub: true,
+    blacklist: [],
     observer: null
   };
 
-  // MV3-safe storage helpers
-  const storage = {
+  const storageSync = {
     get(keys) {
       return new Promise((resolve) => chrome.storage.sync.get(keys, resolve));
-    },
-    set(obj) {
-      return new Promise((resolve) => chrome.storage.sync.set(obj, resolve));
+    }
+  };
+  const storageLocal = {
+    get(keys) {
+      return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
     }
   };
 
-  const storageLocal = {
-  get(keys) {
-    return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
-  }
-};
-
-
-  // -------------------------
-  // Domain parsing helpers
-  // -------------------------
+  // ---- domain helpers ----
   const stripWWW = (h) => h.replace(/^www\./i, "");
 
   function normalizeDomain(input) {
@@ -57,59 +38,21 @@
     let s = String(input).trim().toLowerCase();
     if (!s) return null;
 
-    // Remove inline comments for common list formats
-    s = s.replace(/\s+#.*$/, "");
-    s = s.replace(/\s+!.*$/, "");
-    s = s.replace(/\s+\/\/.*$/, "");
-
-    // hosts-file style: "0.0.0.0 example.com"
-    // keep the last token
-    const parts = s.split(/\s+/).filter(Boolean);
-    if (parts.length >= 2 && /^\d{1,3}(\.\d{1,3}){3}$/.test(parts[0])) {
-      s = parts[parts.length - 1];
-    } else {
-      s = parts[0] || "";
-    }
-
-    // Adblock-ish: "||example.com^"
-    if (s.startsWith("||")) s = s.slice(2);
-    s = s.replace(/\^.*$/, ""); // drop suffix modifiers after ^
-    s = s.replace(/^\*+/, "").replace(/\*+$/, "");
-
-    // Strip protocol and www
+    // strip comments and paths
+    s = s.split("#")[0].trim();
     s = s.replace(/^https?:\/\//, "");
     s = s.replace(/^www\./, "");
-
-    // Drop path/query/hash
     s = s.split("/")[0].split("?")[0].split("#")[0];
 
-    // Basic "has a dot" domain validation
-    if (!/[a-z0-9-]+\.[a-z0-9-.]+$/.test(s)) return null;
-
+    if (!/[a-z0-9-]+\.[a-z0-9.-]+$/.test(s)) return null;
     return s;
   }
 
-  function parseDomainListText(text) {
-    const out = [];
-    const seen = new Set();
-    const lines = String(text || "").split(/\r?\n/);
-    for (const line of lines) {
-      const dom = normalizeDomain(line);
-      if (dom && !seen.has(dom)) {
-        seen.add(dom);
-        out.push(dom);
-      }
-    }
-    return out;
-  }
-
   function suffixMatches(host, domain) {
-    // exact or subdomain match
     return host === domain || host.endsWith("." + domain);
   }
 
   function isBlacklisted(host) {
-    if (!host) return false;
     for (const d of state.blacklist) {
       if (suffixMatches(host, d)) return true;
     }
@@ -138,44 +81,7 @@
     return null;
   }
 
-  // -------------------------
-  // Remote list (cached)
-  // -------------------------
-  async function getRemoteBlacklistCached() {
-    if (!REMOTE_BLACKLIST_URL || REMOTE_BLACKLIST_URL.includes("PUT_YOUR_RAW")) {
-      return [];
-    }
-
-    const {
-      [STORAGE_KEYS.remoteCache]: cache = [],
-      [STORAGE_KEYS.remoteFetchedAt]: fetchedAt = 0
-    } = await storage.get([STORAGE_KEYS.remoteCache, STORAGE_KEYS.remoteFetchedAt]);
-
-    const fresh = Number.isFinite(fetchedAt) && (Date.now() - fetchedAt) < CACHE_TTL_MS;
-    if (fresh && Array.isArray(cache) && cache.length) return cache;
-
-    try {
-      const res = await fetch(REMOTE_BLACKLIST_URL, { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      const list = parseDomainListText(text);
-
-      await storage.set({
-        [STORAGE_KEYS.remoteCache]: list,
-        [STORAGE_KEYS.remoteFetchedAt]: Date.now()
-      });
-
-      console.info(LOG_PREFIX, "Remote blacklist loaded:", list.length);
-      return list;
-    } catch (e) {
-      console.warn(LOG_PREFIX, "Remote blacklist fetch failed, using cached if any.", e);
-      return Array.isArray(cache) ? cache : [];
-    }
-  }
-
-  // -------------------------
-  // Hiding + restoring results
-  // -------------------------
+  // ---- hide/restore helpers ----
   const MARK_FILTERED = "data-unAIfy-filtered";
 
   function findResultContainer(node) {
@@ -205,7 +111,8 @@
   }
 
   function hideBlacklistedResults(root = document) {
-    if (!state.enabled) return;
+    if (!state.enabled || !state.useGithub) return;
+    if (!state.blacklist.length) return;
 
     const searchRoot = root.querySelector("#search") || root;
     const anchors = searchRoot.querySelectorAll('a[href^="http"], a[href^="/url?"]');
@@ -220,7 +127,7 @@
       const host = getHostnameFromAnyUrl(targetUrl);
       if (!host) return;
 
-      // Avoid nuking Google internal navigation
+      // don’t hide Google internal navigation
       if (/\bgoogle\./.test(host)) return;
 
       if (isBlacklisted(host)) {
@@ -236,151 +143,72 @@
   function setupObserver() {
     const root = document.querySelector("#search") || document.body;
     if (!root) return;
+
     if (state.observer) state.observer.disconnect();
 
     state.observer = new MutationObserver(() => {
-      // Cheap throttle via microtask
       Promise.resolve().then(() => hideBlacklistedResults(root));
     });
+
     state.observer.observe(root, { childList: true, subtree: true });
   }
 
-  // -------------------------
-  // Load + merge settings/list
-  // -------------------------
-  function mergeUnique(a, b) {
-    const out = [];
-    const seen = new Set();
-    for (const x of [...(a || []), ...(b || [])]) {
-      const d = normalizeDomain(x);
-      if (d && !seen.has(d)) {
-        seen.add(d);
-        out.push(d);
-      }
-    }
-    return out;
+  async function refreshBlacklist() {
+    const { [SYNC_KEYS.settings]: toggles = {} } = await storageSync.get([SYNC_KEYS.settings]);
+    const { [LOCAL_KEYS.githubList]: githubRaw = [] } = await storageLocal.get([LOCAL_KEYS.githubList]);
+
+    state.enabled = !!(toggles?.[TOGGLE_FILTER] ?? true);
+    state.useGithub = !!(toggles?.[TOGGLE_GITHUB] ?? true);
+
+    const githubList = Array.isArray(githubRaw) ? githubRaw : [];
+    state.blacklist = githubList
+      .map(normalizeDomain)
+      .filter(Boolean);
+
+    // dedupe
+    state.blacklist = Array.from(new Set(state.blacklist));
+
+    console.info(LOG_PREFIX, "Blacklist refreshed:", {
+      enabled: state.enabled,
+      useGithub: state.useGithub,
+      count: state.blacklist.length
+    });
   }
 
-  async function refreshMergedBlacklist() {
-    const {
-      [STORAGE_KEYS.settings]: unAIfySettings = {},
-      [STORAGE_KEYS.localList]: localListRaw = []
-    } = await storage.get([STORAGE_KEYS.settings, STORAGE_KEYS.localList]);
-
-    state.enabled = !!(unAIfySettings?.filter_ai_domains ?? true);
-
-    // If user never opened popup, localListRaw may be missing/empty -> fallback list
-    const localList =
-      Array.isArray(localListRaw) && localListRaw.length
-        ? localListRaw
-        : DEFAULT_FALLBACK_BLACKLIST;
-
-    const remoteList = state.enabled ? await getRemoteBlacklistCached() : [];
-
-    state.blacklist = mergeUnique(remoteList, localList);
-    console.info(LOG_PREFIX, "Blacklist active:", state.enabled, "domains:", state.blacklist.length);
-  }
-
-  // -------------------------
-  // React to toggle/list changes
-  // -------------------------
+  // React to changes (sync settings or local list updates)
   chrome.storage.onChanged.addListener(async (changes, area) => {
     if (area !== "sync" && area !== "local") return;
 
-    let needRescan = false;
+    const relevant = !!changes[SYNC_KEYS.settings] || !!changes[LOCAL_KEYS.githubList];
+    if (!relevant) return;
 
-    // Existing: settings/toggle changes (stored in sync)
-    if (changes.unAIfySettings) {
-      const newSettings = changes.unAIfySettings.newValue || {};
-      settings.toggles = { ...settings.toggles, ...newSettings };
-      needRescan = true;
+    await refreshBlacklist();
+
+    // Reset scan flags
+    document.querySelectorAll("#search a").forEach((a) => (a.__unAIfyChecked = false));
+
+    if (!state.enabled || !state.useGithub) {
+      restoreAllFiltered();
+      return;
     }
-
-    // Existing: local editable blacklist changes (stored in sync)
-    if (changes.unAIfyBlacklist) {
-      settings.blacklist = changes.unAIfyBlacklist.newValue || [];
-      needRescan = true;
-    }
-
-    // ✅ NEW: GitHub blacklist cache changes (stored in local)
-    if (changes.unAIfyGithubBlacklist) {
-      // only re-merge if toggle is enabled; otherwise ignore
-      const useGithub = !!settings.toggles.use_github_blacklist;
-      if (useGithub) {
-        const githubList = Array.isArray(changes.unAIfyGithubBlacklist.newValue)
-          ? changes.unAIfyGithubBlacklist.newValue.map(s => String(s).toLowerCase())
-          : [];
-
-        settings.blacklist = Array.from(new Set([
-          ...(settings.blacklist || []).filter(Boolean), // current merged list
-          ...githubList
-        ]));
-
-        needRescan = true;
-      }
-    }
-
-    if (needRescan) {
-      document.querySelectorAll("#search a").forEach(a => a.__unAIfyChecked = false);
-
-      // If filtering was disabled, restore any hidden results
-      if (!settings.toggles.filter_ai_domains) {
-        restoreHiddenResults();
-        return;
-      }
-
-      hideBlacklistedResults();
-    }
+    hideBlacklistedResults();
   });
 
-
-  // -------------------------
-  // Init
-  // -------------------------
-  // ---- Init ----
   async function init() {
-    // 1) Load settings + user editable blacklist from SYNC (your existing approach)
-    const {
-      unAIfySettings = { filter_ai_domains: true, use_github_blacklist: false },
-      unAIfyBlacklist = []
-    } = await storage.get(["unAIfySettings", "unAIfyBlacklist"]);
+    console.info(LOG_PREFIX, "content-blacklist injected on", location.href);
 
-    // 2) Load cached GitHub blacklist from LOCAL (downloaded by popup.js)
-    const { unAIfyGithubBlacklist = [] } = await new Promise((resolve) =>
-      chrome.storage.local.get(["unAIfyGithubBlacklist"], resolve)
-    );
+    await refreshBlacklist();
 
-    // 3) Merge settings
-    settings.toggles = { ...settings.toggles, ...(unAIfySettings || {}) };
+    if (!state.enabled || !state.useGithub) {
+      console.info(LOG_PREFIX, "Filtering disabled (toggle off).");
+      return;
+    }
 
-    // 4) Normalize lists
-    const localList = Array.isArray(unAIfyBlacklist)
-      ? unAIfyBlacklist.map((s) => String(s).toLowerCase().trim()).filter(Boolean)
-      : [];
+    if (!state.blacklist.length) {
+      console.info(LOG_PREFIX, "No GitHub blacklist imported yet. Open the popup and click Refresh.");
+      return;
+    }
 
-    const githubList = Array.isArray(unAIfyGithubBlacklist)
-      ? unAIfyGithubBlacklist.map((s) => String(s).toLowerCase().trim()).filter(Boolean)
-      : [];
-
-    // 5) Fallback so it "works" even before user has saved any list
-    const DEFAULT_FALLBACK_BLACKLIST = [
-      "perplexity.ai",
-      "deepai.org",
-      "gemini.google.com",
-      "openai.com"
-    ];
-
-    const useGithub = !!settings.toggles.use_github_blacklist;
-
-    // 6) Build the final blacklist (deduped)
-    const merged = [
-      ...(localList.length ? localList : DEFAULT_FALLBACK_BLACKLIST),
-      ...(useGithub ? githubList : [])
-    ];
-
-    settings.blacklist = Array.from(new Set(merged));
-
-    // 7) Start observing + run first pass
     setupObserver();
     hideBlacklistedResults();
 
@@ -393,11 +221,7 @@
         hideBlacklistedResults(search);
       }
     }, 250);
-
-    console.info(LOG_PREFIX, "Google filter ready", {
-      filter_ai_domains: !!settings.toggles.filter_ai_domains,
-      use_github_blacklist: useGithub,
-      mergedCount: settings.blacklist.length
-    });
   }
+
+  init();
 })();
