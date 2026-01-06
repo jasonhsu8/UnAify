@@ -200,7 +200,8 @@
     "*://www.google.co.za/search*",
     "*://www.google.co.zm/search*",
     "*://www.google.co.zw/search*",
-    "*://www.google.cat/search*"
+    "*://www.google.cat/search*",
+    "https://raw.githubusercontent.com/*"
   ],
 
   "declarative_net_request": {

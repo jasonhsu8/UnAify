@@ -10,6 +10,11 @@ const FEATURES =[
     title: "WIP: Filter AI-heavy domains",
     desc: "Hide results from blacklisted sites (Editable list)"
   },
+ {
+    key: "use_uBlockOrigin_blacklist",
+    title: "Use uBlockOrigin AI blocklist",
+    desc: "Imports and applies uBlockOrigin's public no-AI hosts list (Source: laylavish)"
+  },
   {
     key: "warn_post_year",
     title: "WIP: Warning on post-2022 pages",
@@ -42,6 +47,7 @@ const DEFAULT_BLACKLIST = [
 ]
 
 const DEFAULT_CUTOFF_YEAR = 2022;
+
 
 // DOM
 const $ = (sel) => document.querySelector(sel);
@@ -86,6 +92,44 @@ async function syncGoogleSGE(toggles) {
   }
 }
 
+const GITHUB_HOSTS_URL =
+  "https://raw.githubusercontent.com/laylavish/uBlockOrigin-HUGE-AI-Blocklist/main/noai_hosts.txt";
+
+function parseHostsFileToDomains(text) {
+  const out = new Set();
+
+  for (let line of (text || "").split(/\r?\n/)) {
+    line = line.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    // strip inline comments
+    line = line.split("#")[0].trim();
+    if (!line) continue;
+
+    const parts = line.split(/\s+/);
+
+    // hosts lines usually: "0.0.0.0 www.domain.tld"
+    // sometimes just: "domain.tld"
+    const candidate = (parts.length === 1) ? parts[0] : parts[parts.length - 1];
+    if (!candidate) continue;
+
+    let host = candidate.toLowerCase().replace(/^www\./, "");
+
+    // basic sanity (skip headers like "com" or junk)
+    if (!/[a-z0-9-]+\.[a-z0-9.-]+$/.test(host)) continue;
+
+    out.add(host);
+  }
+
+  return Array.from(out);
+}
+
+async function fetchGithubBlacklistDomains() {
+  const res = await fetch(GITHUB_HOSTS_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+  const txt = await res.text();
+  return parseHostsFileToDomains(txt);
+}
 
 
 // Domain utils
@@ -143,14 +187,41 @@ function render({ toggles, blacklist, cutoffyear }) {
     /// bind + persist toggle
     input.checked = !!toggles[f.key];
     input.addEventListener("change", async () => {
-      const newToggles = { ...toggles, [f.key]: input.checked };
-      await saveToggles(newToggles);
-      toggles[f.key] = input.checked;
-      setStatus("Saved");
-      if (f.key === "disable_sge") {
-        await syncGoogleSGE(newToggles);
+    const newToggles = { ...toggles, [f.key]: input.checked };
+    await saveToggles(newToggles);
+    toggles[f.key] = input.checked;
+    setStatus("Saved");
+
+    if (f.key === "disable_sge") {
+      await syncGoogleSGE(newToggles);
+    }
+
+    // NEW: pull the GitHub list the moment the user enables it
+    if (f.key === "use_uBlockOrigin_blacklist") {
+      if (input.checked) {
+        try {
+          setStatus("Downloading list…", 0);
+          const domains = await fetchGithubBlacklistDomains();
+          await chrome.storage.local.set({
+            unAIfyGithubBlacklist: domains,
+            unAIfyGithubBlacklistFetchedAt: Date.now()
+          });
+          setStatus(`Imported ${domains.length} domains`);
+        } catch (e) {
+          console.error(e);
+          setStatus("Failed to import list");
+          // Optional: auto-disable toggle on failure
+          const rollback = { ...newToggles, use_uBlockOrigin_blacklist: false };
+          await saveToggles(rollback);
+          toggles.use_uBlockOrigin_blacklist = false;
+          input.checked = false;
+        }
+      } else {
+        // optional: keep cached list, just disable use
+        setStatus("GitHub list disabled");
       }
-    });
+    }
+  });
 
     row.appendChild(label);
     row.appendChild(input);
