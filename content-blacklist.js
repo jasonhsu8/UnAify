@@ -1,21 +1,28 @@
-// content-blacklist.js — UnAIfy: hide GitHub-blocklisted domains on Google SERPs (MV3)
+// content-blacklist.js — UnAIfy: hide domains on Google SERPs (GitHub list + editable blocklist, with allowlist override)
 (() => {
   "use strict";
 
   const LOG_PREFIX = "[UnAIfy]";
 
   // Storage keys
-  const SYNC_KEYS = { settings: "unAIfySettings" };
-  const LOCAL_KEYS = { githubList: "unAIfyGithubBlacklist" };
+  const SYNC_KEYS = {
+    settings: "unAIfySettings",
+    blocklist: "unAIfyBlacklist",  // editable additions
+    allowlist: "unAIfyAllowlist"   // editable overrides
+  };
+  const LOCAL_KEYS = {
+    githubList: "unAIfyGithubBlacklist"
+  };
 
-  // Toggle keys (MUST match popup.js FEATURES keys)
+  // Toggle keys (must match popup.js)
   const TOGGLE_FILTER = "filter_ai_domains";
   const TOGGLE_GITHUB = "use_uBlockOrigin_blacklist";
 
   const state = {
     enabled: true,
     useGithub: true,
-    blacklist: [],
+    blocklist: [],   // merged effective blocklist
+    allowlist: [],
     observer: null
   };
 
@@ -38,8 +45,10 @@
     let s = String(input).trim().toLowerCase();
     if (!s) return null;
 
-    // strip comments and paths
-    s = s.split("#")[0].trim();
+    // strip inline comments
+    s = s.replace(/\s+#.*$/, "").replace(/\s+\/\/.*$/, "").trim();
+
+    // strip protocol / www / path
     s = s.replace(/^https?:\/\//, "");
     s = s.replace(/^www\./, "");
     s = s.split("/")[0].split("?")[0].split("#")[0];
@@ -52,8 +61,15 @@
     return host === domain || host.endsWith("." + domain);
   }
 
-  function isBlacklisted(host) {
-    for (const d of state.blacklist) {
+  function isAllowed(host) {
+    for (const d of state.allowlist) {
+      if (suffixMatches(host, d)) return true;
+    }
+    return false;
+  }
+
+  function isBlocked(host) {
+    for (const d of state.blocklist) {
       if (suffixMatches(host, d)) return true;
     }
     return false;
@@ -69,7 +85,6 @@
 
   function extractTargetUrlFromAnchor(a) {
     const href = a.getAttribute("href") || "";
-    // Google wraps external links as /url?q=<target>
     if (href.startsWith("/url?")) {
       try {
         const u = new URL(href, location.origin);
@@ -79,6 +94,21 @@
     }
     if (href.startsWith("http")) return href;
     return null;
+  }
+
+  function mergeUnique(...lists) {
+    const out = [];
+    const seen = new Set();
+    for (const list of lists) {
+      for (const x of list || []) {
+        const d = normalizeDomain(x);
+        if (d && !seen.has(d)) {
+          seen.add(d);
+          out.push(d);
+        }
+      }
+    }
+    return out;
   }
 
   // ---- hide/restore helpers ----
@@ -111,8 +141,8 @@
   }
 
   function hideBlacklistedResults(root = document) {
-    if (!state.enabled || !state.useGithub) return;
-    if (!state.blacklist.length) return;
+    if (!state.enabled) return;
+    if (!state.blocklist.length) return;
 
     const searchRoot = root.querySelector("#search") || root;
     const anchors = searchRoot.querySelectorAll('a[href^="http"], a[href^="/url?"]');
@@ -130,7 +160,10 @@
       // don’t hide Google internal navigation
       if (/\bgoogle\./.test(host)) return;
 
-      if (isBlacklisted(host)) {
+      // Allowlist overrides blocklist
+      if (isAllowed(host)) return;
+
+      if (isBlocked(host)) {
         const container = findResultContainer(a);
         if (container && !container.__unAIfyHidden) {
           container.__unAIfyHidden = true;
@@ -153,41 +186,49 @@
     state.observer.observe(root, { childList: true, subtree: true });
   }
 
-  async function refreshBlacklist() {
-    const { [SYNC_KEYS.settings]: toggles = {} } = await storageSync.get([SYNC_KEYS.settings]);
-    const { [LOCAL_KEYS.githubList]: githubRaw = [] } = await storageLocal.get([LOCAL_KEYS.githubList]);
+  async function refreshLists() {
+    const sync = await storageSync.get([SYNC_KEYS.settings, SYNC_KEYS.blocklist, SYNC_KEYS.allowlist]);
+    const local = await storageLocal.get([LOCAL_KEYS.githubList]);
 
-    state.enabled = !!(toggles?.[TOGGLE_FILTER] ?? true);
-    state.useGithub = !!(toggles?.[TOGGLE_GITHUB] ?? true);
+    const toggles = sync[SYNC_KEYS.settings] || {};
+    const customBlock = Array.isArray(sync[SYNC_KEYS.blocklist]) ? sync[SYNC_KEYS.blocklist] : [];
+    const allow = Array.isArray(sync[SYNC_KEYS.allowlist]) ? sync[SYNC_KEYS.allowlist] : [];
+    const github = Array.isArray(local[LOCAL_KEYS.githubList]) ? local[LOCAL_KEYS.githubList] : [];
 
-    const githubList = Array.isArray(githubRaw) ? githubRaw : [];
-    state.blacklist = githubList
-      .map(normalizeDomain)
-      .filter(Boolean);
+    state.enabled = !!(toggles?.[TOGGLE_FILTER] ?? false);
+    state.useGithub = !!(toggles?.[TOGGLE_GITHUB] ?? false);
 
-    // dedupe
-    state.blacklist = Array.from(new Set(state.blacklist));
+    state.allowlist = mergeUnique(allow);
 
-    console.info(LOG_PREFIX, "Blacklist refreshed:", {
+    const effectiveBlock = state.useGithub ? mergeUnique(github, customBlock) : mergeUnique(customBlock);
+    // Remove anything allowlisted
+    state.blocklist = effectiveBlock.filter((d) => !state.allowlist.includes(d));
+
+    console.info(LOG_PREFIX, "Lists refreshed:", {
       enabled: state.enabled,
       useGithub: state.useGithub,
-      count: state.blacklist.length
+      blockCount: state.blocklist.length,
+      allowCount: state.allowlist.length
     });
   }
 
-  // React to changes (sync settings or local list updates)
   chrome.storage.onChanged.addListener(async (changes, area) => {
     if (area !== "sync" && area !== "local") return;
 
-    const relevant = !!changes[SYNC_KEYS.settings] || !!changes[LOCAL_KEYS.githubList];
+    const relevant =
+      !!changes[SYNC_KEYS.settings] ||
+      !!changes[SYNC_KEYS.blocklist] ||
+      !!changes[SYNC_KEYS.allowlist] ||
+      !!changes[LOCAL_KEYS.githubList];
+
     if (!relevant) return;
 
-    await refreshBlacklist();
+    await refreshLists();
 
     // Reset scan flags
     document.querySelectorAll("#search a").forEach((a) => (a.__unAIfyChecked = false));
 
-    if (!state.enabled || !state.useGithub) {
+    if (!state.enabled) {
       restoreAllFiltered();
       return;
     }
@@ -197,15 +238,10 @@
   async function init() {
     console.info(LOG_PREFIX, "content-blacklist injected on", location.href);
 
-    await refreshBlacklist();
+    await refreshLists();
 
-    if (!state.enabled || !state.useGithub) {
-      console.info(LOG_PREFIX, "Filtering disabled (toggle off).");
-      return;
-    }
-
-    if (!state.blacklist.length) {
-      console.info(LOG_PREFIX, "No GitHub blacklist imported yet. Open the popup and click Refresh.");
+    if (!state.enabled) {
+      console.info(LOG_PREFIX, "Filtering disabled.");
       return;
     }
 

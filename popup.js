@@ -1,35 +1,41 @@
-// popup.js — UnAIfy popup UI + settings + GitHub blacklist import (MV3)
+// popup.js — UnAIfy (original skeleton + toggles + uBlockOrigin's AI blocklist + expandable allow/block editors)
 
 const FEATURES = [
   {
     key: "disable_sge",
     title: "Disable Google AI Overview",
-    desc: "Disables Google's AI generated 'Overview' search result box"
+    desc: "Disables Google's AI-generated 'Overview' search result box"
   },
   {
     key: "filter_ai_domains",
-    title: "Filter AI-heavy domains (Google results)",
-    desc: "Hides results from domains in the imported GitHub blocklist"
-  },
-  {
-    key: "use_uBlockOrigin_blacklist",
-    title: "Use GitHub AI blocklist",
-    desc: "Imports and applies the public no-AI hosts list (laylavish)"
+    title: "Filter AI-heavy domains",
+    desc: "Hide results using uBlockOrigin's AI blocklist + your edits (Allowlist overrides)"
   },
   {
     key: "warn_post_year",
-    title: "Warning on post-2022 pages",
-    desc: "Shows a warning if a page is created/updated after 2022"
+    title: "Warning on post cut off year pages",
+    desc: "Shows a warning if a page is created/updated after cut off year (default 2022)"
   }
 ];
 
 const DEFAULT_CUTOFF_YEAR = 2022;
 
-// GitHub raw list (hosts format)
+// uBlockOrigin GitHub raw list (hosts format)
 const GITHUB_HOSTS_URL =
   "https://raw.githubusercontent.com/laylavish/uBlockOrigin-HUGE-AI-Blocklist/main/noai_hosts.txt";
 
-// DOM helpers
+// uBlockOrigin GitHub
+const GITHUB_UBLOCKORIGIN_URL = "https://github.com/laylavish/uBlockOrigin-HUGE-AI-Blocklist";
+
+// Storage keys
+const KEY_SETTINGS = "unAIfySettings";
+const KEY_BLOCKLIST = "unAIfyBlacklist";     // user-added blocklist (editable)
+const KEY_ALLOWLIST = "unAIfyAllowlist";     // user allowlist override (editable)
+const KEY_CUTOFF = "unAIfyCutOffYear";
+
+const KEY_GH_LIST = "unAIfyGithubBlacklist"; // local storage (big list)
+const KEY_GH_FETCHED = "unAIfyGithubBlacklistFetchedAt";
+
 const $ = (sel) => document.querySelector(sel);
 
 let featuresEl, statusEl, resetBtn;
@@ -38,272 +44,467 @@ let featuresEl, statusEl, resetBtn;
 function setStatus(text, timeout = 1200) {
   if (!statusEl) return;
   statusEl.textContent = text;
-  if (timeout) setTimeout(() => (statusEl.textContent = "Saved"), timeout);
+  if (timeout) setTimeout(() => (statusEl.textContent = "Ready"), timeout);
 }
 
-// ---- Storage helpers ----
-async function loadSettings() {
-  const [{ unAIfySettings }, { unAIfyCutOffYear }] = await Promise.all([
-    chrome.storage.sync.get("unAIfySettings"),
-    chrome.storage.sync.get("unAIfyCutOffYear")
+// ----- UI helpers -----
+function makeSwitch(id, checked) {
+  const wrap = document.createElement("label");
+  wrap.className = "switch";
+  wrap.title = "Toggle";
+
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.id = id;
+  input.checked = !!checked;
+
+  const slider = document.createElement("span");
+  slider.className = "slider";
+
+  wrap.appendChild(input);
+  wrap.appendChild(slider);
+
+  return { wrap, input };
+}
+
+function fmtTime(ms) {
+  if (!ms) return "Never";
+  try {
+    return new Date(ms).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    }); 
+  } catch {
+    return "Unknown"; 
+  }
+}
+
+// ----- Storage helpers -----
+async function loadState() {
+  const [sync, local] = await Promise.all([
+    chrome.storage.sync.get([KEY_SETTINGS, KEY_BLOCKLIST, KEY_ALLOWLIST, KEY_CUTOFF]),
+    chrome.storage.local.get([KEY_GH_LIST, KEY_GH_FETCHED])
   ]);
 
-  const { unAIfyGithubBlacklistFetchedAt, unAIfyGithubBlacklist } =
-    await chrome.storage.local.get(["unAIfyGithubBlacklistFetchedAt", "unAIfyGithubBlacklist"]);
+  const defaultToggles = Object.fromEntries(FEATURES.map(f => [f.key, false]));
+  // Default: uBlockOrigin list toggle OFF (user can turn it ON in the domain controls panel)
+  defaultToggles.use_uBlockOrigin_blacklist = false;
 
-  // defaults: everything ON, but GitHub list may not be imported yet
-  const defaultToggles = Object.fromEntries(FEATURES.map((f) => [f.key, true]));
-  const mergedToggles = { ...defaultToggles, ...(unAIfySettings || {}) };
+  const toggles = { ...defaultToggles, ...(sync[KEY_SETTINGS] || {}) };
 
   return {
-    toggles: mergedToggles,
-    cutoffyear: Number.isInteger(unAIfyCutOffYear) ? unAIfyCutOffYear : DEFAULT_CUTOFF_YEAR,
-    githubCount: Array.isArray(unAIfyGithubBlacklist) ? unAIfyGithubBlacklist.length : 0,
-    githubFetchedAt: typeof unAIfyGithubBlacklistFetchedAt === "number" ? unAIfyGithubBlacklistFetchedAt : 0
+    toggles,
+    blocklist: Array.isArray(sync[KEY_BLOCKLIST]) ? sync[KEY_BLOCKLIST] : [],
+    allowlist: Array.isArray(sync[KEY_ALLOWLIST]) ? sync[KEY_ALLOWLIST] : [],
+    cutoffyear: Number.isInteger(sync[KEY_CUTOFF]) ? sync[KEY_CUTOFF] : DEFAULT_CUTOFF_YEAR,
+    ghCount: Array.isArray(local[KEY_GH_LIST]) ? local[KEY_GH_LIST].length : 0,
+    ghFetchedAt: typeof local[KEY_GH_FETCHED] === "number" ? local[KEY_GH_FETCHED] : 0
   };
 }
 
-const saveToggles = (toggles) => chrome.storage.sync.set({ unAIfySettings: toggles });
-const saveCutOffYear = (cutoffyear) => chrome.storage.sync.set({ unAIfyCutOffYear: cutoffyear });
+const saveToggles = (toggles) => chrome.storage.sync.set({ [KEY_SETTINGS]: toggles });
+const saveBlocklist = (arr) => chrome.storage.sync.set({ [KEY_BLOCKLIST]: arr });
+const saveAllowlist = (arr) => chrome.storage.sync.set({ [KEY_ALLOWLIST]: arr });
+const saveCutOffYear = (y) => chrome.storage.sync.set({ [KEY_CUTOFF]: y });
 
-// ---- GitHub list parsing + fetch ----
+// ----- DNR ruleset toggling (your existing feature) -----
+async function syncGoogleSGE(toggles) {
+  const on = !!toggles.disable_sge;
+  if (!chrome.declarativeNetRequest?.updateEnabledRulesets) return;
+  if (on) {
+    await chrome.declarativeNetRequest.updateEnabledRulesets({
+      enableRulesetIds: ["google-ai-overview-off-redirect"],
+      disableRulesetIds: []
+    });
+  } else {
+    await chrome.declarativeNetRequest.updateEnabledRulesets({
+      enableRulesetIds: [],
+      disableRulesetIds: ["google-ai-overview-off-redirect"]
+    });
+  }
+}
+
+// ----- Domain utils -----
+function normalizeDomain(input) {
+  if (!input) return null;
+  let s = String(input).trim().toLowerCase();
+  if (!s) return null;
+
+  // remove inline comments
+  s = s.replace(/\s+#.*$/, "").replace(/\s+\/\/.*$/, "").trim();
+
+  // strip protocol / www / paths
+  s = s.replace(/^https?:\/\//, "");
+  s = s.replace(/^www\./, "");
+  s = s.split("/")[0].split("?")[0].split("#")[0];
+
+  if (!/[a-z0-9-]+\.[a-z0-9-.]+$/.test(s)) return null;
+  return s;
+}
+
+function parseDomainTextarea(text) {
+  const lines = (text || "").split(/\r?\n/);
+  const out = [];
+  const seen = new Set();
+  for (const line of lines) {
+    const dom = normalizeDomain(line);
+    if (dom && !seen.has(dom)) { seen.add(dom); out.push(dom); }
+  }
+  return out;
+}
+
+function listToTextarea(list) {
+  return (list || []).join("\n");
+}
+
+// ----- uBlockOrigin list fetch -----
 function parseHostsFileToDomains(text) {
   const out = new Set();
-
   for (let line of String(text || "").split(/\r?\n/)) {
     line = line.trim();
     if (!line || line.startsWith("#")) continue;
-
-    // strip inline comments
     line = line.split("#")[0].trim();
     if (!line) continue;
 
     const parts = line.split(/\s+/).filter(Boolean);
-
-    // hosts lines usually: "0.0.0.0 www.domain.tld"
-    // sometimes just: "domain.tld"
     const candidate = parts.length === 1 ? parts[0] : parts[parts.length - 1];
     if (!candidate) continue;
 
     let host = candidate.toLowerCase().replace(/^www\./, "");
-
-    // basic sanity check
     if (!/[a-z0-9-]+\.[a-z0-9.-]+$/.test(host)) continue;
 
     out.add(host);
   }
-
   return Array.from(out);
 }
 
-async function fetchGithubBlacklistDomains() {
+async function fetchGithubList() {
   const res = await fetch(GITHUB_HOSTS_URL, { cache: "no-store" });
   if (!res.ok) throw new Error(`Fetch failed: HTTP ${res.status}`);
   const txt = await res.text();
   return parseHostsFileToDomains(txt);
 }
 
-function fmtTime(ms) {
-  if (!ms) return "Never";
-  try {
-    return new Date(ms).toLocaleString();
-  } catch {
-    return "Unknown";
-  }
-}
-
-// ---- UI render ----
-function render({ toggles, cutoffyear, githubCount, githubFetchedAt }) {
+// ----- Render -----
+function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedAt }) {
   featuresEl.innerHTML = "";
 
-  // Toggles
   FEATURES.forEach((f) => {
     const row = document.createElement("div");
-    row.style.display = "grid";
-    row.style.gridTemplateColumns = "auto 1fr";
-    row.style.gap = "10px";
-    row.style.padding = "10px 0";
-    row.style.borderBottom = "1px solid #1f2937";
+    row.className = "toggle";
 
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.checked = !!toggles[f.key];
-    input.style.transform = "scale(1.1)";
-    input.style.marginTop = "2px";
+    const label = document.createElement("label");
+    label.htmlFor = f.key;
 
-    const meta = document.createElement("div");
-    meta.innerHTML = `
-      <div style="font-weight:700">${f.title}</div>
-      <div style="opacity:.85; font-size:12px; line-height:1.35">${f.desc}</div>
-    `;
+    const title = document.createElement("span");
+    title.className = "title";
+    title.textContent = f.title;
 
-    input.addEventListener("change", async () => {
-      const newToggles = { ...toggles, [f.key]: input.checked };
+    const desc = document.createElement("span");
+    desc.className = "desc";
+    desc.textContent = f.desc;
+
+    label.appendChild(title);
+    label.appendChild(desc);
+
+    const sw = makeSwitch(f.key, !!toggles[f.key]);
+
+    sw.input.addEventListener("change", async () => {
+      const newToggles = { ...toggles, [f.key]: sw.input.checked };
       await saveToggles(newToggles);
-      toggles[f.key] = input.checked;
+      toggles[f.key] = sw.input.checked;
       setStatus("Saved");
 
       if (f.key === "disable_sge") {
         await syncGoogleSGE(newToggles);
       }
-
-      // If they enable GitHub list but haven't imported yet, nudge them
-      if (f.key === "use_uBlockOrigin_blacklist" && input.checked && githubCount === 0) {
-        setStatus("Tip: click Refresh to import the GitHub list", 2500);
-      }
     });
 
-    row.appendChild(input);
-    row.appendChild(meta);
+    row.appendChild(label);
+    row.appendChild(sw.wrap);
     featuresEl.appendChild(row);
-  });
 
-  // GitHub list panel (replaces old editable blacklist)
-  const panel = document.createElement("div");
-  panel.style.marginTop = "12px";
-  panel.style.padding = "12px";
-  panel.style.border = "1px solid #1f2937";
-  panel.style.borderRadius = "12px";
-  panel.style.background = "#0b1220";
-  panel.innerHTML = `
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-      <div>
-        <div style="font-weight:800">GitHub AI blocklist</div>
-        <div style="opacity:.85; font-size:12px; margin-top:2px;">
-          Domains imported: <b>${githubCount}</b> · Last fetched: <b>${fmtTime(githubFetchedAt)}</b>
+    // --- AI Domain Controls Panel (under filter_ai_domains) ---
+    if (f.key === "filter_ai_domains") {
+      const editorWrap = document.createElement("div");
+      editorWrap.style.margin = "6px 0 2px";
+
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.textContent = "AI domain controls";
+      editBtn.className = "btn";
+      editorWrap.appendChild(editBtn);
+
+      const panel = document.createElement("div");
+      panel.className = "panel";
+      panel.style.display = "none";
+      panel.innerHTML = `
+        <div class="row" style="margin-bottom:10px;">
+          <div style="min-width:0">
+            <div class="title">uBlockOrigin's AI blocklist</div>
+            <div class="small">
+              Source: <span class="mono">laylavish/uBlockOrigin-HUGE-AI-Blocklist</span> · file: <span class="mono">noai_hosts.txt</span>
+            </div>
+          </div>
+          <span class="chip mono" id="gh-chip">uBlockOrigin's AI blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}</span>
         </div>
-      </div>
-      <div style="display:flex; gap:8px;">
-        <button id="gh-refresh" class="btn" type="button">Refresh</button>
-        <button id="gh-clear" class="btn" type="button" style="opacity:.9">Clear</button>
-      </div>
-    </div>
-    <div style="opacity:.8; font-size:12px; margin-top:8px; line-height:1.35">
-      Source: laylavish “noai_hosts.txt”. Your Google-result filtering will only work when
-      <b>Filter AI-heavy domains</b> and <b>Use GitHub AI blocklist</b> are enabled.
-    </div>
-  `;
-  featuresEl.appendChild(panel);
 
-  // Bind GitHub panel buttons
-  const refreshBtn = $("#gh-refresh");
-  const clearBtn = $("#gh-clear");
+        <div class="row" style="margin-bottom:10px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div>
+              <div class="title" style="font-size:13px;">Use uBlockOrigin's AI blocklist</div>
+                <div class="small">When enabled, uBlockOrigin's AI blocklist domains are included in filtering. 
+              </div>
+            </div>
+          </div>
+          <span id="gh-toggle-slot"></span>
+            <div class="small"> Press the refresh button to <b><i>download</i></b> or <b><i>refresh</i></b> the list
+          </div>
+        </div>
 
-  refreshBtn.addEventListener("click", async () => {
-    try {
-      setStatus("Downloading list…", 0);
-      const domains = await fetchGithubBlacklistDomains();
-      await chrome.storage.local.set({
-        unAIfyGithubBlacklist: domains,
-        unAIfyGithubBlacklistFetchedAt: Date.now()
+        <div class="row" style="margin-bottom:12px;">
+          <button id="gh-refresh" class="btn success" type="button">Refresh AI Blocklist</button>
+          <button id="gh-clear" class="btn danger" type="button">Clear uBlockOrigin blocklist</button>
+          <a class="link" href="${GITHUB_UBLOCKORIGIN_URL}" target="_blank" rel="noreferrer noopener">View source</a>
+        </div>
+
+        <details id="allow-details">
+          <summary>
+            <div class="summary-left">
+              <div class="summary-title">Allowlist</div>
+              <div class="summary-sub">Keeps domains visible even if uBlockOrigin blocks them.</div>
+            </div>
+            <span class="chip mono" id="allow-chip">Allowlist: ${allowlist.length}</span>
+          </summary>
+          <div class="details-body">
+            <textarea id="allow-ta" placeholder="example.com&#10;openai.com"></textarea>
+            <div class="actions">
+              <button id="allow-cancel" class="btn" type="button">Cancel</button>
+              <button id="allow-save" class="btn" type="button">Save allowlist</button>
+            </div>
+          </div>
+        </details>
+
+        <details id="block-details">
+          <summary>
+            <div class="summary-left">
+              <div class="summary-title">Custom blocklist</div>
+              <div class="summary-sub">Extra domains you want to hide.</div>
+            </div>
+            <span class="chip mono" id="block-chip">Custom blocklist: ${blocklist.length}</span>
+          </summary>
+          <div class="details-body">
+            <textarea id="block-ta" placeholder="perplexity.ai&#10;gemini.google.com"></textarea>
+            <div class="actions">
+              <button id="block-cancel" class="btn" type="button">Cancel</button>
+              <button id="block-save" class="btn" type="button">Save blocklist</button>
+            </div>
+          </div>
+        </details>
+
+        <div class="small" style="margin-top:10px;">
+          <b>Tip:</b>
+            <i>Click on <b>Allowlist</b> to customise! Allowlist overrides blocklist. You can also click on <b>Custom blocklist</b> to add extra domains!</i>
+        </div>
+      `;
+
+      editorWrap.appendChild(panel);
+      featuresEl.appendChild(editorWrap);
+      editorWrap.style.marginBottom = "6px";
+
+      // bind panel show/hide
+      function populate() {
+        panel.querySelector("#allow-ta").value = listToTextarea(allowlist);
+        panel.querySelector("#block-ta").value = listToTextarea(blocklist);
+        panel.querySelector("#allow-chip").textContent = `Allowlist: ${allowlist.length}`;
+        panel.querySelector("#block-chip").textContent = `Custom blocklist: ${blocklist.length}`;
+        panel.querySelector("#gh-chip").textContent = `uBlockOrigin's blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}`;
+      }
+
+      editBtn.addEventListener("click", () => {
+        const showing = panel.style.display !== "none";
+        if (showing) panel.style.display = "none";
+        else {
+          populate();
+          panel.style.display = "block";
+        }
       });
-      setStatus(`Imported ${domains.length} domains`, 2500);
 
-      // Re-render to show updated counts
-      render({
-        toggles,
-        cutoffyear,
-        githubCount: domains.length,
-        githubFetchedAt: Date.now()
+      // uBlockOrigin toggle switch (stored in unAIfySettings)
+      const ghToggleSlot = panel.querySelector("#gh-toggle-slot");
+      const ghSwitch = makeSwitch("use_uBlockOrigin_blacklist", !!toggles.use_uBlockOrigin_blacklist);
+      ghToggleSlot.appendChild(ghSwitch.wrap);
+
+      ghSwitch.input.addEventListener("change", async () => {
+        const newToggles = { ...toggles, use_uBlockOrigin_blacklist: ghSwitch.input.checked };
+        await saveToggles(newToggles);
+        toggles.use_uBlockOrigin_blacklist = ghSwitch.input.checked;
+        setStatus("Saved");
+
+        if (ghSwitch.input.checked && ghCount === 0) {
+          setStatus("Tip: refresh the uBlockOrigin blocklist", 1800);
+        }
       });
-    } catch (e) {
-      console.error(e);
-      setStatus("Failed to import list", 2500);
+
+      // Refresh uBlockOrigin's blocklist
+      panel.querySelector("#gh-refresh").addEventListener("click", async () => {
+        try {
+          setStatus("Downloading list…", 0);
+          const domains = await fetchGithubList();
+          const now = Date.now();
+          await chrome.storage.local.set({
+            [KEY_GH_LIST]: domains,
+            [KEY_GH_FETCHED]: now
+          });
+          ghCount = domains.length;
+          ghFetchedAt = now;
+          panel.querySelector("#gh-chip").textContent = `uBlockOrigin's blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}`;
+          setStatus(`Imported ${ghCount} domains`, 2000);
+        } catch (e) {
+          console.error(e);
+          setStatus("Failed to import list", 2200);
+        }
+      });
+
+      panel.querySelector("#gh-clear").addEventListener("click", async () => {
+        await chrome.storage.local.set({ [KEY_GH_LIST]: [], [KEY_GH_FETCHED]: 0 });
+        ghCount = 0;
+        ghFetchedAt = 0;
+        panel.querySelector("#gh-chip").textContent = `uBlockOrigin's AI blocklist: 0 · Never`;
+        setStatus("Cleared uBlockOrigin's AI blocklist", 1800);
+      });
+
+      // Allowlist save/cancel
+      const allowTa = () => panel.querySelector("#allow-ta");
+      panel.querySelector("#allow-cancel").addEventListener("click", () => {
+        allowTa().value = listToTextarea(allowlist);
+      });
+      panel.querySelector("#allow-save").addEventListener("click", async () => {
+        const newAL = parseDomainTextarea(allowTa().value);
+        await saveAllowlist(newAL);
+        allowlist.length = 0; allowlist.push(...newAL);
+        panel.querySelector("#allow-chip").textContent = `Allowlist: ${allowlist.length}`;
+        setStatus("Allowlist saved", 1800);
+      });
+
+      // Blocklist save/cancel
+      const blockTa = () => panel.querySelector("#block-ta");
+      panel.querySelector("#block-cancel").addEventListener("click", () => {
+        blockTa().value = listToTextarea(blocklist);
+      });
+      panel.querySelector("#block-save").addEventListener("click", async () => {
+        const newBL = parseDomainTextarea(blockTa().value);
+        await saveBlocklist(newBL);
+        blocklist.length = 0; blocklist.push(...newBL);
+        panel.querySelector("#block-chip").textContent = `Custom blocklist: ${blocklist.length}`;
+        setStatus("Blocklist saved", 1800);
+      });
     }
-  });
 
-  clearBtn.addEventListener("click", async () => {
-    await chrome.storage.local.set({
-      unAIfyGithubBlacklist: [],
-      unAIfyGithubBlacklistFetchedAt: 0
-    });
-    setStatus("Cleared imported list", 2000);
-    render({
-      toggles,
-      cutoffyear,
-      githubCount: 0,
-      githubFetchedAt: 0
-    });
-  });
+    // Cutoff year editor (keep original feel, but compact)
+    if (f.key === "warn_post_year") {
+      const editorWrap = document.createElement("div");
+      editorWrap.style.margin = "6px 0 4px";
 
-  // Cutoff year panel (for your warning feature)
-  const yearPanel = document.createElement("div");
-  yearPanel.style.marginTop = "12px";
-  yearPanel.style.padding = "12px";
-  yearPanel.style.border = "1px solid #1f2937";
-  yearPanel.style.borderRadius = "12px";
-  yearPanel.style.background = "#0b1220";
-  yearPanel.innerHTML = `
-    <div style="font-weight:800">Warning cutoff year</div>
-    <div style="opacity:.85; font-size:12px; margin-top:2px;">Warn on pages updated after this year.</div>
-    <div style="display:flex; gap:8px; margin-top:10px;">
-      <input id="cutoff-year" type="number" min="1990" max="2100"
-        style="width:120px; padding:8px; border-radius:10px; border:1px solid #1f2937; background:#0f172a; color:#fff;"
-        value="${cutoffyear}" />
-      <button id="cutoff-save" class="btn" type="button">Save</button>
-    </div>
-  `;
-  featuresEl.appendChild(yearPanel);
+      const info = document.createElement("div");
+      info.className = "desc";
+      info.marginTop = "6px";
+      info.innerHTML = `Cutoff year: <strong id="cutoff-display">${cutoffyear}</strong>`;
+      editorWrap.appendChild(info);
 
-  $("#cutoff-save").addEventListener("click", async () => {
-    const v = parseInt($("#cutoff-year").value, 10);
-    if (!Number.isInteger(v) || v < 1990 || v > 2100) {
-      setStatus("Invalid year", 1500);
-      return;
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.textContent = "Change year";
+      editBtn.className = "btn";
+      editBtn.style.marginTop = "10px";
+      editorWrap.appendChild(editBtn);
+
+      const panel = document.createElement("div");
+      panel.className = "panel";
+      panel.style.display = "none";
+      panel.innerHTML = `
+        <div style="display:grid; gap:10px;">
+          <label class="title" for="cutoff-input">Set cutoff year</label>
+          <input id="cutoff-input" type="number" min="1990" max="2100"
+                 style="width:140px; background:#0a0f1c; color:#e5e7eb; border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:10px;"
+                 value="${cutoffyear}">
+          <div class="desc">Pages updated after this year trigger a warning.</div>
+          <div style="display:flex; gap:8px; justify-content:flex-end;">
+            <button id="cancel-cutoff" class="btn" type="button">Cancel</button>
+            <button id="save-cutoff" class="btn" type="button">Save year</button>
+          </div>
+        </div>
+      `;
+      editorWrap.appendChild(panel);
+      featuresEl.appendChild(editorWrap);
+
+      const cutoffDisplay = () => info.querySelector("#cutoff-display");
+      const cutoffInput = () => panel.querySelector("#cutoff-input");
+
+      editBtn.addEventListener("click", () => {
+        const showing = panel.style.display !== "none";
+        panel.style.display = showing ? "none" : "block";
+      });
+
+      panel.querySelector("#cancel-cutoff").addEventListener("click", () => {
+        panel.style.display = "none";
+      });
+
+      panel.querySelector("#save-cutoff").addEventListener("click", async () => {
+        let val = parseInt(cutoffInput().value, 10);
+        if (!Number.isFinite(val)) val = DEFAULT_CUTOFF_YEAR;
+        val = Math.min(2100, Math.max(1990, val));
+        await saveCutOffYear(val);
+        cutoffyear = val;
+        cutoffDisplay().textContent = String(val);
+        setStatus("Cutoff year saved", 1800);
+        panel.style.display = "none";
+      });
     }
-    await saveCutOffYear(v);
-    setStatus("Saved");
   });
 }
 
-// ---- Existing function (kept) ----
-async function syncGoogleSGE(toggles) {
-  // your existing code expects these ruleset IDs
-  const enable = !!toggles.disable_sge;
-  try {
-    await chrome.declarativeNetRequest.updateEnabledRulesets({
-      enableRulesetIds: enable ? ["google-ai-overview-off-redirect"] : [],
-      disableRulesetIds: enable ? [] : ["google-ai-overview-off-redirect"]
-    });
-  } catch (e) {
-    console.warn("syncGoogleSGE failed", e);
-  }
-}
-
-// ---- Init ----
+// ----- Init -----
 async function init() {
-  featuresEl = $("#features");
-  statusEl = $("#status");
-  resetBtn = $("#reset");
+  featuresEl = document.getElementById("features");
+  statusEl = document.getElementById("status");
+  resetBtn = document.getElementById("reset");
 
-  const data = await loadSettings();
-  render(data);
+  if (!featuresEl || !statusEl || !resetBtn) {
+    console.error("[UnAIfy] Missing DOM nodes (#features, #status, #reset)");
+    return;
+  }
+
+  const state = await loadState();
+  await syncGoogleSGE(state.toggles);
+  render(state);
 
   resetBtn.addEventListener("click", async () => {
-    const defaultToggles = Object.fromEntries(FEATURES.map((f) => [f.key, true]));
+    const defaultToggles = Object.fromEntries(FEATURES.map(f => [f.key, false]));
+    defaultToggles.use_uBlockOrigin_blacklist = false;
+
     await Promise.all([
       saveToggles(defaultToggles),
+      saveBlocklist([]),
+      saveAllowlist([]),
       saveCutOffYear(DEFAULT_CUTOFF_YEAR),
-      chrome.storage.local.set({
-        unAIfyGithubBlacklist: [],
-        unAIfyGithubBlacklistFetchedAt: 0
-      })
+      chrome.storage.local.set({ [KEY_GH_LIST]: [], [KEY_GH_FETCHED]: 0 })
     ]);
+
     await syncGoogleSGE(defaultToggles);
 
-    render({
-      toggles: defaultToggles,
-      cutoffyear: DEFAULT_CUTOFF_YEAR,
-      githubCount: 0,
-      githubFetchedAt: 0
-    });
-    setStatus("Reset to defaults", 2000);
+    const fresh = await loadState();
+    render(fresh);
+    setStatus("Reset to defaults", 1600);
   });
 
   setStatus("Ready", 800);
 }
 
-// Ensure popup.js runs after DOM
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", init, { once: true });
 } else {
