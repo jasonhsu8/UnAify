@@ -245,25 +245,21 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
       panel.innerHTML = `
         <div class="row" style="margin-bottom:10px;">
           <div style="min-width:0">
-            <div class="title">uBlockOrigin's AI blocklist</div>
+            <div class="title">GitHub AI blocklist</div>
             <div class="small">
-              Source: <span class="mono">laylavish/uBlockOrigin-HUGE-AI-Blocklist</span> · file: <span class="mono">noai_hosts.txt</span>
+              <b>Source:</b> <span class="mono"> <i>laylavish/uBlockOrigin-HUGE-AI-Blocklist</i> </span> <br><b>File:</b> <span class="mono"><i>noai_hosts.txt</i></span>
             </div>
           </div>
-          <span class="chip mono" id="gh-chip">uBlockOrigin's AI blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}</span>
+          <span class="chip mono" id="gh-chip">uBlockOrigin's blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}</span>
         </div>
 
         <div class="row" style="margin-bottom:10px;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div>
-              <div class="title" style="font-size:13px;">Use uBlockOrigin's AI blocklist</div>
-                <div class="small">When enabled, uBlockOrigin's AI blocklist domains are included in filtering. 
-              </div>
-            </div>
+          <div style="min-width:0">
+            <div class="title" style="font-size:13px;">Use uBlockOrigin's AI blocklist</div>
+            <div class="small"><When enabled, uBlockOrigin's AI blocklist domains are included in filtering.</div>
+            <div class="small" style="margin-top:6px;">Press <b><i>Refresh</i></b> to download/update the list.</div>
           </div>
           <span id="gh-toggle-slot"></span>
-            <div class="small"> Press the refresh button to <b><i>download</i></b> or <b><i>refresh</i></b> the list
-          </div>
         </div>
 
         <div class="row" style="margin-bottom:12px;">
@@ -318,11 +314,18 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
 
       // bind panel show/hide
       function populate() {
-        panel.querySelector("#allow-ta").value = listToTextarea(allowlist);
-        panel.querySelector("#block-ta").value = listToTextarea(blocklist);
+        const allowEl = panel.querySelector("#allow-ta");
+        const blockEl = panel.querySelector("#block-ta");
+        if (!allowEl || !blockEl) {
+          console.warn("[UnAIfy] AI domain controls panel is missing textarea elements. Check panel HTML.");
+          return;
+        }
+        allowEl.value = listToTextarea(allowlist);
+        blockEl.value = listToTextarea(blocklist);
         panel.querySelector("#allow-chip").textContent = `Allowlist: ${allowlist.length}`;
         panel.querySelector("#block-chip").textContent = `Custom blocklist: ${blocklist.length}`;
-        panel.querySelector("#gh-chip").textContent = `uBlockOrigin's blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}`;
+        const ghChip = panel.querySelector("#gh-chip");
+        if (ghChip) ghChip.textContent = `uBlockOrigin's blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}`;
       }
 
       editBtn.addEventListener("click", () => {
@@ -362,7 +365,8 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
           });
           ghCount = domains.length;
           ghFetchedAt = now;
-          panel.querySelector("#gh-chip").textContent = `uBlockOrigin's blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}`;
+          const ghChip = panel.querySelector("#gh-chip");
+          if (ghChip) ghChip.textContent = `uBlockOrigin's blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}`;
           setStatus(`Imported ${ghCount} domains`, 2000);
         } catch (e) {
           console.error(e);
@@ -374,7 +378,8 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
         await chrome.storage.local.set({ [KEY_GH_LIST]: [], [KEY_GH_FETCHED]: 0 });
         ghCount = 0;
         ghFetchedAt = 0;
-        panel.querySelector("#gh-chip").textContent = `uBlockOrigin's AI blocklist: 0 · Never`;
+        const ghChip = panel.querySelector("#gh-chip");
+          if (ghChip) ghChip.textContent = `uBlockOrigin's AI blocklist: 0 · Never`;
         setStatus("Cleared uBlockOrigin's AI blocklist", 1800);
       });
 
@@ -412,7 +417,7 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
 
       const info = document.createElement("div");
       info.className = "desc";
-      info.marginTop = "6px";
+      info.style.marginTop = "6px";
       info.innerHTML = `Cutoff year: <strong id="cutoff-display">${cutoffyear}</strong>`;
       editorWrap.appendChild(info);
 
