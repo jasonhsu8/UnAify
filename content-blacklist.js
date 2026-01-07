@@ -1,4 +1,4 @@
-// content-blacklist.js — UnAIfy: hide domains on Google SERPs (GitHub list + editable blocklist, with allowlist override)
+// content-blacklist.js — UnAIfy: hide domains on Google SERPs (uBlockOrigin list + editable blocklist, with allowlist override)
 (() => {
   "use strict";
 
@@ -14,7 +14,7 @@
     githubList: "unAIfyGithubBlacklist"
   };
 
-  // Toggle keys (must match popup.js)
+  // Toggle keys (MUST MATCH popup.js)
   const TOGGLE_FILTER = "filter_ai_domains";
   const TOGGLE_GITHUB = "use_uBlockOrigin_blacklist";
 
@@ -37,7 +37,7 @@
     }
   };
 
-  // ---- domain helpers ----
+  // Domain Helpers
   const stripWWW = (h) => h.replace(/^www\./i, "");
 
   function normalizeDomain(input) {
@@ -111,7 +111,7 @@
     return out;
   }
 
-  // ---- hide/restore helpers ----
+  // Hide/Restore Helpers
   const MARK_FILTERED = "data-unAIfy-filtered";
 
   function findResultContainer(node) {

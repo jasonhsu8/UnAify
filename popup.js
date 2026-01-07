@@ -1,4 +1,4 @@
-// popup.js — UnAIfy (original skeleton + toggles + uBlockOrigin's AI blocklist + expandable allow/block editors)
+// popup.js — UnAIfy
 
 const FEATURES = [
   {
@@ -47,7 +47,7 @@ function setStatus(text, timeout = 1200) {
   if (timeout) setTimeout(() => (statusEl.textContent = "Ready"), timeout);
 }
 
-// ----- UI helpers -----
+// UI helpers
 function makeSwitch(id, checked) {
   const wrap = document.createElement("label");
   wrap.className = "switch";
@@ -83,7 +83,7 @@ function fmtTime(ms) {
   }
 }
 
-// ----- Storage helpers -----
+// Storage helpers
 async function loadState() {
   const [sync, local] = await Promise.all([
     chrome.storage.sync.get([KEY_SETTINGS, KEY_BLOCKLIST, KEY_ALLOWLIST, KEY_CUTOFF]),
@@ -91,7 +91,7 @@ async function loadState() {
   ]);
 
   const defaultToggles = Object.fromEntries(FEATURES.map(f => [f.key, false]));
-  // Default: uBlockOrigin list toggle OFF (user can turn it ON in the domain controls panel)
+  // Default: uBlockOrigin list toggle OFF (user can turn ON in the domain controls panel)
   defaultToggles.use_uBlockOrigin_blacklist = false;
 
   const toggles = { ...defaultToggles, ...(sync[KEY_SETTINGS] || {}) };
@@ -111,7 +111,7 @@ const saveBlocklist = (arr) => chrome.storage.sync.set({ [KEY_BLOCKLIST]: arr })
 const saveAllowlist = (arr) => chrome.storage.sync.set({ [KEY_ALLOWLIST]: arr });
 const saveCutOffYear = (y) => chrome.storage.sync.set({ [KEY_CUTOFF]: y });
 
-// ----- DNR ruleset toggling (your existing feature) -----
+// DNR ruleset toggling
 async function syncGoogleSGE(toggles) {
   const on = !!toggles.disable_sge;
   if (!chrome.declarativeNetRequest?.updateEnabledRulesets) return;
@@ -128,7 +128,7 @@ async function syncGoogleSGE(toggles) {
   }
 }
 
-// ----- Domain utils -----
+// Domain utils 
 function normalizeDomain(input) {
   if (!input) return null;
   let s = String(input).trim().toLowerCase();
@@ -161,7 +161,7 @@ function listToTextarea(list) {
   return (list || []).join("\n");
 }
 
-// ----- uBlockOrigin list fetch -----
+// uBlockOrigin list fetch
 function parseHostsFileToDomains(text) {
   const out = new Set();
   for (let line of String(text || "").split(/\r?\n/)) {
@@ -189,7 +189,7 @@ async function fetchGithubList() {
   return parseHostsFileToDomains(txt);
 }
 
-// ----- Render -----
+// Render
 function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedAt }) {
   featuresEl.innerHTML = "";
 
@@ -228,7 +228,7 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
     row.appendChild(sw.wrap);
     featuresEl.appendChild(row);
 
-    // --- AI Domain Controls Panel (under filter_ai_domains) ---
+    // AI Domain Controls Panel (under filter_ai_domains)
     if (f.key === "filter_ai_domains") {
       const editorWrap = document.createElement("div");
       editorWrap.style.margin = "6px 0 2px";
@@ -473,7 +473,7 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
   });
 }
 
-// ----- Init -----
+// Init
 async function init() {
   featuresEl = document.getElementById("features");
   statusEl = document.getElementById("status");
