@@ -195,8 +195,8 @@
     const allow = Array.isArray(sync[SYNC_KEYS.allowlist]) ? sync[SYNC_KEYS.allowlist] : [];
     const github = Array.isArray(local[LOCAL_KEYS.githubList]) ? local[LOCAL_KEYS.githubList] : [];
 
-    state.enabled = !!(toggles?.[TOGGLE_FILTER] ?? false);
-    state.useGithub = !!(toggles?.[TOGGLE_GITHUB] ?? false);
+    state.enabled = !!(toggles?.[TOGGLE_FILTER] ?? true);
+    state.useGithub = !!(toggles?.[TOGGLE_GITHUB] ?? true);
 
     state.allowlist = mergeUnique(allow);
 
