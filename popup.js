@@ -256,7 +256,7 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
         <div class="row" style="margin-bottom:10px;">
           <div style="min-width:0">
             <div class="title" style="font-size:13px;">Use uBlockOrigin's AI blocklist</div>
-            <div class="small"><When enabled, uBlockOrigin's AI blocklist domains are included in filtering.</div>
+            <div class="small">When enabled, uBlockOrigin's AI blocklist domains are included in filtering.</div>
             <div class="small" style="margin-top:6px;">Press <b><i>Refresh</i></b> to download/update the list.</div>
           </div>
           <span id="gh-toggle-slot"></span>

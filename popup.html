@@ -62,7 +62,12 @@
     .status{color: var(--muted); font-size: 12px;}
 
     .panel{margin: 8px 12px 12px; padding: 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.18); background: var(--panel);}
-    .panel .row{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+    .panel .row{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+    .panel .row.center{align-items:center;}
+    .panel .row .switch{align-self:flex-start; margin-top:2px;}
+    .panel .row.buttons{display:grid; grid-template-columns: 1fr 1fr; gap:10px; align-items:center;}
+    .panel .row.buttons > *{min-width:0;}
+    .panel .row.buttons .btn{width:100%; white-space:nowrap;}
     .chip{font-size:11px; padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18); color: var(--muted); background: rgba(255,255,255,0.05); white-space:nowrap;}
     .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
     .small{font-size:12px; color:var(--muted); line-height:1.35;}
