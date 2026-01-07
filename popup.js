@@ -4,17 +4,17 @@ const FEATURES = [
   {
     key: "disable_sge",
     title: "Disable Google AI Overview",
-    desc: "Disables Google's AI-generated 'Overview' search result box"
+    desc: "Disables Google's AI-generated 'Overview' search result box."
   },
   {
     key: "filter_ai_domains",
-    title: "Filter AI-heavy domains",
-    desc: "Hide results using uBlockOrigin's AI blocklist + your edits (Allowlist overrides)"
+    title: "Filter AI-heavy Domains",
+    desc: "Hides AI-heavy domains in Google results. You control what's blocked: use uBlockOrigin's AI blocklist, add your own blocklist, or override with an allowlist."
   },
   {
     key: "warn_post_year",
-    title: "Warning on post cut off year pages",
-    desc: "Shows a warning if a page is created/updated after cut off year (default 2022)"
+    title: "Warning on Post Cut Off Year Pages",
+    desc: "Shows a warning if a page is created/updated after cut off year (default 2022)."
   }
 ];
 
@@ -235,7 +235,7 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
 
       const editBtn = document.createElement("button");
       editBtn.type = "button";
-      editBtn.textContent = "AI domain controls";
+      editBtn.textContent = "AI Domain Controls";
       editBtn.className = "btn";
       editorWrap.appendChild(editBtn);
 
@@ -257,14 +257,14 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
           <div style="min-width:0">
             <div class="title" style="font-size:13px;">Use uBlockOrigin's AI blocklist</div>
             <div class="small">When enabled, uBlockOrigin's AI blocklist domains are included in filtering.</div>
-            <div class="small" style="margin-top:6px;">Press <b><i>Refresh</i></b> to download/update the list.</div>
+            <div class="small" style="margin-top:6px;">Press <b><i>Refresh AI Blocklist</i></b> to download/update the list.</div>
           </div>
           <span id="gh-toggle-slot"></span>
         </div>
 
         <div class="row" style="margin-bottom:12px;">
           <button id="gh-refresh" class="btn success" type="button">Refresh AI Blocklist</button>
-          <button id="gh-clear" class="btn danger" type="button">Clear uBlockOrigin blocklist</button>
+          <button id="gh-clear" class="btn danger" type="button">Clear uBlockOrigin Blocklist</button>
           <a class="link" href="${GITHUB_UBLOCKORIGIN_URL}" target="_blank" rel="noreferrer noopener">View source</a>
         </div>
 
@@ -288,10 +288,10 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
         <details id="block-details">
           <summary>
             <div class="summary-left">
-              <div class="summary-title">Custom blocklist</div>
+              <div class="summary-title">Custom Blocklist</div>
               <div class="summary-sub">Extra domains you want to hide.</div>
             </div>
-            <span class="chip mono" id="block-chip">Custom blocklist: ${blocklist.length}</span>
+            <span class="chip mono" id="block-chip">Custom Blocklist: ${blocklist.length}</span>
           </summary>
           <div class="details-body">
             <textarea id="block-ta" placeholder="perplexity.ai&#10;gemini.google.com"></textarea>
@@ -304,7 +304,7 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
 
         <div class="small" style="margin-top:10px;">
           <b>Tip:</b>
-            <i>Click on <b>Allowlist</b> to customise! Allowlist overrides blocklist. You can also click on <b>Custom blocklist</b> to add extra domains!</i>
+            <i>Click on <b>Allowlist</b> and/or <b>Custom Blocklist</b> to customise! Allowlist overrides blocklist. You can edit Custom Blocklist to add extra domains or use exclusively without uBlockOrigin's AI blocklist.</i>
         </div>
       `;
 
@@ -418,12 +418,12 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
       const info = document.createElement("div");
       info.className = "desc";
       info.style.marginTop = "6px";
-      info.innerHTML = `Cutoff year: <strong id="cutoff-display">${cutoffyear}</strong>`;
+      info.innerHTML = `<b>Cutoff Year:</b> <strong id="cutoff-display">${cutoffyear}</strong>`;
       editorWrap.appendChild(info);
 
       const editBtn = document.createElement("button");
       editBtn.type = "button";
-      editBtn.textContent = "Change year";
+      editBtn.textContent = "Change Year";
       editBtn.className = "btn";
       editBtn.style.marginTop = "10px";
       editorWrap.appendChild(editBtn);
@@ -433,11 +433,11 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
       panel.style.display = "none";
       panel.innerHTML = `
         <div style="display:grid; gap:10px;">
-          <label class="title" for="cutoff-input">Set cutoff year</label>
+          <label class="title" for="cutoff-input">Set cut off year</label>
           <input id="cutoff-input" type="number" min="1990" max="2100"
                  style="width:140px; background:#0a0f1c; color:#e5e7eb; border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:10px;"
                  value="${cutoffyear}">
-          <div class="desc">Pages updated after this year trigger a warning.</div>
+          <div class="desc">Pages updated after this year triggers a warning.</div>
           <div style="display:flex; gap:8px; justify-content:flex-end;">
             <button id="cancel-cutoff" class="btn" type="button">Cancel</button>
             <button id="save-cutoff" class="btn" type="button">Save year</button>
