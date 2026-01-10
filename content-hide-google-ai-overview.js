@@ -1,9 +1,9 @@
 // content-hide-google-ai-overview.js — UnAIfy
-// Toggle-aware version built from your working template (multi-language headings).
-// - Reads chrome.storage.sync.unAIfySettings.hide_sge
-// - Hides only the AI Overview module + related “People also ask” rows mentioning AI Overview
-// - Never hides big wrappers (#search/#rcnt/main/body)
-// - Cleanly restores styles when the toggle is OFF
+// Toggle-aware version
+//  - Reads chrome.storage.sync.unAIfySettings.hide_sge
+//  - Hides only the AI Overview module + related “People also ask” rows mentioning AI Overview
+//  - Never hides big wrappers (#search/#rcnt/main/body)
+//  - Cleanly restores styles when the toggle is OFF
 
 (() => {
   "use strict";
@@ -17,12 +17,12 @@
   // Multi-language patterns for the “AI Overview” title / copy
   // (lifted from your template and extended to a case-insensitive bundle)
   const patterns = [
-    /übersicht mit ki/i,                 // de
     /ai overview/i,                      // en
+    /AI 摘要/,                             // zh-TW
+    /übersicht mit ki/i,                 // de
     /prezentare generală generată de ai/i, // ro
     /AI による概要/,                         // ja
     /Обзор от ИИ/,                         // ru
-    /AI 摘要/,                             // zh-TW
     /AI-overzicht/i,                     // nl
     /Vista creada con IA/i,              // es
     /Přehled od AI/i,                    // cs
@@ -33,17 +33,17 @@
     ".Ww4FFb", ".MjjYud", ".xpd", "[data-sokoban-container]", "[data-hveid]", ".g"
   ].join(", ");
 
-  // ---- state ----
+  // state
   let enabled = true;
   let observer = null;
   let lastUrl = location.href;
 
-  // ---- storage helper ----
+  // storage helper
   const storage = {
     get: (k) => new Promise((res) => chrome.storage.sync.get(k, res))
   };
 
-  // ---- utils ----
+  // utils
   function isBigWrapper(el) {
     if (!el) return true;
     const tag = (el.tagName || "").toLowerCase();
@@ -71,8 +71,8 @@
     });
   }
 
-  // ---- template-inspired detectors (adapted) ----
-  // 1) Find a heading <h1>/<h2> inside #rcnt whose text matches any pattern
+  // Detectors
+  // 1) find a heading <h1>/<h2> inside #rcnt which text matches any pattern
   function findAIHeading() {
     const rcnt = document.querySelector("div#rcnt");
     if (!rcnt) return null;
@@ -84,8 +84,8 @@
     return null;
   }
 
-  // 2) From that heading, find the AI Overview container:
-  //    try “as a result card” in #rso, else “above results” in #rcnt direct child
+  // 2) From heading find AI Overview container:
+  // try “as a result card” in #rso, else “above results” in #rcnt direct child
   function findAIOverviewModuleFromHeading(h) {
     if (!h) return null;
     let mod =
@@ -93,21 +93,21 @@
       h.closest("div#rcnt > div");  // Overview above results
     if (!mod || isBigWrapper(mod)) return null;
 
-    // Tighten to a reasonable module container if possible
+    // tighten to reasonable module container if possible
     const tighter = h.closest(MODULE_SELECTORS);
     if (tighter && !isBigWrapper(tighter)) mod = tighter;
 
     return mod;
   }
 
-  // 3) People also ask rows that themselves contain “AI overview” strings
+  // 3) People also ask rows containing “AI overview” strings
   function findPeopleAlsoAskAI() {
     const rows = document.querySelectorAll("div.related-question-pair");
     const hits = [];
     for (const row of rows) {
       const html = row.innerHTML || "";
       if (patterns.some((re) => re.test(html))) {
-        // Hide the pair’s container (same level Google uses to wrap the Q/A)
+        // Hide the pair container (same level Google uses to wrap Q/A)
         const container = row.parentElement?.parentElement;
         if (container && !isBigWrapper(container)) hits.push(container);
       }
@@ -115,7 +115,7 @@
     return hits;
   }
 
-  // 4) Cosmetic tweaks like your template: header tabs padding, main margin
+  // 4) Cosmetic tweaks: header tabs padding and main margin
   function applyCosmetics() {
     const headerTabs = document.querySelector("div#hdtb-sc > div");
     if (headerTabs && !headerTabs.hasAttribute(MARK_PAD)) {
@@ -146,20 +146,20 @@
     }
   }
 
-  // ---- one-pass apply / undo ----
+  // one pass apply / undo 
   function hideOnce() {
     if (!enabled) return false;
 
-    // Heading → module
+    // Heading to module
     const h = findAIHeading();
     const aiModule = findAIOverviewModuleFromHeading(h);
     if (aiModule) markHide(aiModule, MARK_AI);
 
-    // PAA rows that mention AI Overview
+    // PAA rows mentioning AI Overview
     const paMods = findPeopleAlsoAskAI();
     paMods.forEach((m) => markHide(m, MARK_PAA));
 
-    // Cosmetic tidy
+    // tidy
     applyCosmetics();
 
     return !!aiModule || paMods.length > 0;
@@ -171,7 +171,7 @@
     undoCosmetics();
   }
 
-  // ---- observer / url watcher ----
+  // observer / url watcher
   function ensureObserver(on) {
     if (on && !observer) {
       observer = new MutationObserver(() => enabled && hideOnce());
@@ -202,7 +202,7 @@
     }
   }
 
-  // ---- live toggle from popup ----
+  // live toggle from popup
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "sync" || !changes.unAIfySettings) return;
     const next = !!changes.unAIfySettings.newValue?.hide_sge;
@@ -212,7 +212,7 @@
     }
   });
 
-  // ---- init ----
+  // init
   (async () => {
     try {
       const { unAIfySettings } = await storage.get("unAIfySettings");
