@@ -9,7 +9,7 @@ This project is a Manifest V3 extension and is designed to be expanded after pro
 
 ### 2. Filter AI-heavy domains
 - Hides search results from domains that are likely to be AI-heavy.
-    - Uses an external AI blocklist (thanks to uBlockOrigin) that can be imported from GitHub (https://github.com/laylavish/uBlockOrigin-HUGE-AI-Blocklist)
+    - Uses an external AI blocklist (thanks to laylavish) that can be imported from GitHub (https://github.com/laylavish/uBlockOrigin-HUGE-AI-Blocklist)
     - Support user control:
         - Allowlist: keeps domains visible even if they appear in the GitHub blocklist
         - Custom blocklist: add extra domains you personally want hidden
@@ -36,7 +36,7 @@ Project structure (Key Files)
 6. Select the unzipped UnAIfy-main folder
 7. Pin the extension to begin using!
 
-### Using uBlockOrigin's AI blocklist
+### Using laylavish's AI blocklist
 1. Open the UnAIfy pop up
 2. Enable the **Filter AI-heavy Domains** feature (can be done before or after)
 3. Open **AI Domain Controls**
@@ -44,9 +44,9 @@ Project structure (Key Files)
 5. Optionally:
     - Add domains to **Allowlist** to keep them visible
     - Add domains to **Custom blocklist** to hide additional sites
-6. Click **View source** to view uBlockOrigin's HUGE AI Blocklist
+6. Click **View source** to view laylavish's HUGE AI Blocklist
 
 
 ## License / Attribution
 - UnAIfy is a university proof-of-concept / prototype project.
-- Domain list imports are sourced from uBlockOrigin, a third-party public GitHub list (https://github.com/laylavish/uBlockOrigin-HUGE-AI-Blocklist)
+- Domain list imports are sourced from laylavish, a third-party public GitHub list (https://github.com/laylavish/uBlockOrigin-HUGE-AI-Blocklist)
