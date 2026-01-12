@@ -92,7 +92,7 @@ async function loadState() {
 
   const defaultToggles = Object.fromEntries(FEATURES.map(f => [f.key, false]));
   // Default: laylavish list toggle OFF (user can turn ON in the domain controls panel)
-  defaultToggles.use_ulaylavish_blacklist = false;
+  defaultToggles.use_laylavish_blacklist = false;
 
   const toggles = { ...defaultToggles, ...(sync[KEY_SETTINGS] || {}) };
 
