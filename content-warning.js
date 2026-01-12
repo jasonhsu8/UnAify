@@ -1,20 +1,20 @@
-// content-warning.js — UnAIfy: warn on post-year pages
+// content-warning.js - warn on post-year pages
 
 (() => {
   const LOG_PREFIX = "[UnAIfy]";
   const settings = {
-    toggles: { warn_post_year: true }, // default on
+    toggles: { warn_post_year: false }, // default on
     cutoffyear: 2022
   };
 
-  // ---- Promisified storage helpers (MV3-safe) ----
+  // storage helpers (MV3-safe)
   const storage = {
     get(keys) {
       return new Promise((resolve) => chrome.storage.sync.get(keys, resolve));
     }
   };
 
-  // ---- Date detectors (best-effort) ----
+  // date detectors (best estimate/effort)
   function parseIsoMaybe(s) {
     if (!s) return null;
     const d = new Date(s);
@@ -65,7 +65,7 @@
   }
 
   function getFromLastModified() {
-    // Can be noisy (template changes), so we use it as a fallback
+    // could be noisy so we fallback used
     const d = new Date(document.lastModified);
     return Number.isFinite(d.getTime()) ? d : null;
   }
@@ -79,7 +79,7 @@
     );
   }
 
-  // ---- UI banner ----
+  // UI banner
   function injectBanner(year, foundDate) {
     if (document.getElementById("unAIfy-postyear-banner")) return;
 
@@ -116,13 +116,13 @@
     });
   }
 
-  // ---- Main check ----
+  // Main check
   function maybeWarn() {
     if (!settings.toggles.warn_post_year) return;
     if (sessionStorage.getItem("unAIfy_dismiss") === "1") return;
 
     const d = detectPageDate();
-    if (!d) return; // no reliable signal
+    if (!d) return;    // no reliable signal
 
     const pageYear = d.getUTCFullYear();
     if (pageYear > settings.cutoffyear) {
@@ -130,7 +130,7 @@
     }
   }
 
-  // ---- React to storage changes ----
+  //React to storage changes
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "sync") return;
 
@@ -139,7 +139,7 @@
         ...settings.toggles,
         ...(changes.unAIfySettings.newValue || {})
       };
-      // Re-evaluate if toggles flipped
+      // Re-evaluate if toggles are flipped
       maybeWarn();
     }
     if (changes.unAIfyCutOffYear) {
@@ -154,7 +154,7 @@
     }
   });
 
-  // ---- Init ----
+  // Init
   async function init() {
     const {
       unAIfySettings = { warn_post_year: true },
@@ -164,7 +164,8 @@
     settings.toggles = { ...settings.toggles, ...(unAIfySettings || {}) };
     settings.cutoffyear = Number.isInteger(unAIfyCutOffYear) ? unAIfyCutOffYear : 2022;
 
-    // Run once on load; some sites hydrate late, so also retry quickly
+    // Run once on load
+    // some sites are late so retry quickly
     maybeWarn();
     setTimeout(maybeWarn, 1200);
 
