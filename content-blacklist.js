@@ -1,4 +1,4 @@
-// content-blacklist.js — UnAIfy: hide domains on Google SERPs (uBlockOrigin list + editable blocklist, with allowlist override)
+// content-blacklist.js — UnAIfy: hide domains on Google SERPs (laylavish list + editable blocklist, with allowlist override)
 (() => {
   "use strict";
 
@@ -16,7 +16,7 @@
 
   // Toggle keys (MUST MATCH popup.js)
   const TOGGLE_FILTER = "filter_ai_domains";
-  const TOGGLE_GITHUB = "use_uBlockOrigin_blacklist";
+  const TOGGLE_GITHUB = "use_laylavish_blacklist";
 
   const state = {
     enabled: true,

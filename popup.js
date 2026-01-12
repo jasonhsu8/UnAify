@@ -9,7 +9,7 @@ const FEATURES = [
   {
     key: "filter_ai_domains",
     title: "Filter AI-heavy Domains",
-    desc: "Hides AI-heavy domains in Google results. You control what's blocked: use uBlockOrigin's AI blocklist, add your own blocklist, or override with an allowlist."
+    desc: "Hides AI-heavy domains in Google results. You control what's blocked: use laylavish's AI blocklist, add your own blocklist, or override with an allowlist."
   },
   {
     key: "warn_post_year",
@@ -20,12 +20,12 @@ const FEATURES = [
 
 const DEFAULT_CUTOFF_YEAR = 2022;
 
-// uBlockOrigin GitHub raw list (hosts format)
+// laylavish's GitHub raw list (hosts format)
 const GITHUB_HOSTS_URL =
   "https://raw.githubusercontent.com/laylavish/uBlockOrigin-HUGE-AI-Blocklist/main/noai_hosts.txt";
 
-// uBlockOrigin GitHub
-const GITHUB_UBLOCKORIGIN_URL = "https://github.com/laylavish/uBlockOrigin-HUGE-AI-Blocklist";
+// laylavish GitHub
+const GITHUB_LAYLAVISH_URL = "https://github.com/laylavish/uBlockOrigin-HUGE-AI-Blocklist";
 
 // Storage keys
 const KEY_SETTINGS = "unAIfySettings";
@@ -91,8 +91,8 @@ async function loadState() {
   ]);
 
   const defaultToggles = Object.fromEntries(FEATURES.map(f => [f.key, false]));
-  // Default: uBlockOrigin list toggle OFF (user can turn ON in the domain controls panel)
-  defaultToggles.use_uBlockOrigin_blacklist = false;
+  // Default: laylavish list toggle OFF (user can turn ON in the domain controls panel)
+  defaultToggles.use_ulaylavish_blacklist = false;
 
   const toggles = { ...defaultToggles, ...(sync[KEY_SETTINGS] || {}) };
 
@@ -161,7 +161,7 @@ function listToTextarea(list) {
   return (list || []).join("\n");
 }
 
-// uBlockOrigin list fetch
+// laylavish list fetch
 function parseHostsFileToDomains(text) {
   const out = new Set();
   for (let line of String(text || "").split(/\r?\n/)) {
@@ -250,13 +250,13 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
               <b>Source:</b> <span class="mono"> <i>laylavish/uBlockOrigin-HUGE-AI-Blocklist</i> </span> <br><b>File:</b> <span class="mono"><i>noai_hosts.txt</i></span>
             </div>
           </div>
-          <span class="chip mono" id="gh-chip">uBlockOrigin's blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}</span>
+          <span class="chip mono" id="gh-chip">laylavish's blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}</span>
         </div>
 
         <div class="row" style="margin-bottom:10px;">
           <div style="min-width:0">
-            <div class="title" style="font-size:13px;">Use uBlockOrigin's AI blocklist</div>
-            <div class="small">When enabled, uBlockOrigin's AI blocklist domains are included in filtering.</div>
+            <div class="title" style="font-size:13px;">Use laylavish's AI blocklist</div>
+            <div class="small">When enabled, laylavish's AI blocklist domains are included in filtering.</div>
             <div class="small" style="margin-top:6px;">Press <b><i>Refresh AI Blocklist</i></b> to download/update the list.</div>
           </div>
           <span id="gh-toggle-slot"></span>
@@ -264,15 +264,15 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
 
         <div class="row" style="margin-bottom:12px;">
           <button id="gh-refresh" class="btn success" type="button">Refresh AI Blocklist</button>
-          <button id="gh-clear" class="btn danger" type="button">Clear uBlockOrigin Blocklist</button>
-          <a class="link" href="${GITHUB_UBLOCKORIGIN_URL}" target="_blank" rel="noreferrer noopener">View source</a>
+          <button id="gh-clear" class="btn danger" type="button">Clear laylavish Blocklist</button>
+          <a class="link" href="${GITHUB_LAYLAVISH_URL}" target="_blank" rel="noreferrer noopener">View source</a>
         </div>
 
         <details id="allow-details">
           <summary>
             <div class="summary-left">
               <div class="summary-title">Allowlist</div>
-              <div class="summary-sub">Keeps domains visible even if uBlockOrigin blocks them.</div>
+              <div class="summary-sub">Keeps domains visible even if laylavish blocks them.</div>
             </div>
             <span class="chip mono" id="allow-chip">Allowlist: ${allowlist.length}</span>
           </summary>
@@ -304,7 +304,7 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
 
         <div class="small" style="margin-top:10px;">
           <b>Tip:</b>
-            <i>Click on <b>Allowlist</b> and/or <b>Custom Blocklist</b> to customise! Allowlist overrides blocklist. You can edit Custom Blocklist to add extra domains or use exclusively without uBlockOrigin's AI blocklist.</i>
+            <i>Click on <b>Allowlist</b> and/or <b>Custom Blocklist</b> to customise! Allowlist overrides blocklist. You can edit Custom Blocklist to add extra domains or use exclusively without laylavish's AI blocklist.</i>
         </div>
       `;
 
@@ -325,7 +325,7 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
         panel.querySelector("#allow-chip").textContent = `Allowlist: ${allowlist.length}`;
         panel.querySelector("#block-chip").textContent = `Custom blocklist: ${blocklist.length}`;
         const ghChip = panel.querySelector("#gh-chip");
-        if (ghChip) ghChip.textContent = `uBlockOrigin's blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}`;
+        if (ghChip) ghChip.textContent = `laylavish's blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}`;
       }
 
       editBtn.addEventListener("click", () => {
@@ -337,23 +337,23 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
         }
       });
 
-      // uBlockOrigin toggle switch (stored in unAIfySettings)
+      // laylavish toggle switch (stored in unAIfySettings)
       const ghToggleSlot = panel.querySelector("#gh-toggle-slot");
-      const ghSwitch = makeSwitch("use_uBlockOrigin_blacklist", !!toggles.use_uBlockOrigin_blacklist);
+      const ghSwitch = makeSwitch("use_laylavish_blacklist", !!toggles.use_laylavish_blacklist);
       ghToggleSlot.appendChild(ghSwitch.wrap);
 
       ghSwitch.input.addEventListener("change", async () => {
-        const newToggles = { ...toggles, use_uBlockOrigin_blacklist: ghSwitch.input.checked };
+        const newToggles = { ...toggles, use_laylavish_blacklist: ghSwitch.input.checked };
         await saveToggles(newToggles);
-        toggles.use_uBlockOrigin_blacklist = ghSwitch.input.checked;
+        toggles.use_laylavish_blacklist = ghSwitch.input.checked;
         setStatus("Saved");
 
         if (ghSwitch.input.checked && ghCount === 0) {
-          setStatus("Tip: refresh the uBlockOrigin blocklist", 1800);
+          setStatus("Tip: refresh the laylavish blocklist", 1800);
         }
       });
 
-      // Refresh uBlockOrigin's blocklist
+      // Refresh laylavish's blocklist
       panel.querySelector("#gh-refresh").addEventListener("click", async () => {
         try {
           setStatus("Downloading list…", 0);
@@ -366,7 +366,7 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
           ghCount = domains.length;
           ghFetchedAt = now;
           const ghChip = panel.querySelector("#gh-chip");
-          if (ghChip) ghChip.textContent = `uBlockOrigin's blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}`;
+          if (ghChip) ghChip.textContent = `laylavish's blocklist: ${ghCount} · ${fmtTime(ghFetchedAt)}`;
           setStatus(`Imported ${ghCount} domains`, 2000);
         } catch (e) {
           console.error(e);
@@ -379,8 +379,8 @@ function render({ toggles, blocklist, allowlist, cutoffyear, ghCount, ghFetchedA
         ghCount = 0;
         ghFetchedAt = 0;
         const ghChip = panel.querySelector("#gh-chip");
-          if (ghChip) ghChip.textContent = `uBlockOrigin's AI blocklist: 0 · Never`;
-        setStatus("Cleared uBlockOrigin's AI blocklist", 1800);
+          if (ghChip) ghChip.textContent = `laylavish's AI blocklist: 0 · Never`;
+        setStatus("Cleared laylavish's AI blocklist", 1800);
       });
 
       // Allowlist save/cancel
@@ -490,7 +490,7 @@ async function init() {
 
   resetBtn.addEventListener("click", async () => {
     const defaultToggles = Object.fromEntries(FEATURES.map(f => [f.key, false]));
-    defaultToggles.use_uBlockOrigin_blacklist = false;
+    defaultToggles.use_laylavish_blacklist = false;
 
     await Promise.all([
       saveToggles(defaultToggles),
